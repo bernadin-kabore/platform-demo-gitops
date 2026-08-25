@@ -1,0 +1,47 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xs3buckets.aws.platform.acme.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  labels:
+    provider: aws
+spec:
+  compositeTypeRef:
+    apiVersion: platform.acme.io/v1alpha1
+    kind: XS3Bucket
+  mode: Pipeline
+  pipeline:
+    - step: create-bucket
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          - name: bucket
+            base:
+              apiVersion: s3.aws.upbound.io/v1beta1
+              kind: Bucket
+              spec:
+                forProvider:
+                  region: us-east-1
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.region
+                toFieldPath: spec.forProvider.region
+          - name: versioning
+            base:
+              apiVersion: s3.aws.upbound.io/v1beta1
+              kind: BucketVersioning
+              spec:
+                forProvider:
+                  bucketSelector:
+                    matchControllerRef: true
+                  region: us-east-1
+                  versioningConfiguration:
+                    status: Enabled
+            patches:
+              - type: FromCompositeFieldPath
+                fromFieldPath: spec.parameters.region
+                toFieldPath: spec.forProvider.region

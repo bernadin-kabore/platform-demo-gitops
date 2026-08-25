@@ -1,0 +1,47 @@
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+    # Discover ServiceMonitors/PodMonitors from ANY namespace, not just
+    # monitoring — every app namespace the Backstage template creates ships
+    # its own ServiceMonitor and Prometheus must pick it up automatically.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+
+grafana:
+  enabled: true
+  adminPassword: "" # set via a sealed/external secret in a real deployment, not here
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL
+    datasources:
+      enabled: true
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      url: http://tempo.observability.svc.cluster.local:3100
+      access: proxy
+    - name: Elasticsearch-Logs
+      type: elasticsearch
+      url: http://elasticsearch-master.logging.svc.cluster.local:9200
+      access: proxy
+      jsonData:
+        index: "logs-*"
+        timeField: "@timestamp"
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true

@@ -1,0 +1,40 @@
+# Discovers every apps/<name>/application.yaml in this repo and creates the
+# matching ArgoCD Application for it. Add a new platform component by
+# dropping a new directory under apps/ — nothing else needs to change here.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-apps
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
+        revision: main
+        files:
+          - path: "apps/**/config.json" # matches nested dirs too, e.g. apps/observability/kiali
+  template:
+    metadata:
+      name: "{{.component}}"
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
+        targetRevision: main
+        path: "{{.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 5m

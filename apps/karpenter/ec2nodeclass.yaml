@@ -1,0 +1,21 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiFamily: AL2023
+  role: "platform-demo-karpenter-node" # module.karpenter_iam.node_role_arn's role name
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: platform-demo
+  securityGroupSelectorTerms:
+    - tags:
+        kubernetes.io/cluster/platform-demo: shared
+  tags:
+    karpenter.sh/discovery: platform-demo
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true

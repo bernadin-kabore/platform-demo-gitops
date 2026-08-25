@@ -1,0 +1,20 @@
+auth:
+  strategy: anonymous # swap for openid/oauth against your IdP for a real deployment
+
+deployment:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+
+external_services:
+  prometheus:
+    url: "http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090"
+  tracing:
+    enabled: true
+    provider: tempo
+    in_cluster_url: "http://tempo.observability.svc.cluster.local:16685" # Tempo's Jaeger-compatible query API
+    use_grpc: true
+  grafana:
+    enabled: true
+    in_cluster_url: "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local"
+
+istio_namespace: istio-system

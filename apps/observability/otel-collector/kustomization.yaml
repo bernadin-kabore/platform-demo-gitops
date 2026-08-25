@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  # Gateway: receives OTLP traces/metrics from app SDKs and the Istio mesh,
+  # fans them out to Tempo (traces) and exposes a /metrics endpoint
+  # Prometheus scrapes (via the ServiceMonitor in kube-prometheus-stack).
+  - name: opentelemetry-collector
+    repo: https://open-telemetry.github.io/opentelemetry-helm-charts
+    version: 0.97.1
+    releaseName: otel-collector-gateway
+    namespace: observability
+    valuesFile: values-gateway.yaml
+    includeCRDs: true
+
+  # Agent: one pod per node, tails container log files and ships them to
+  # Elasticsearch, so app pods don't need a logging sidecar of their own.
+  - name: opentelemetry-collector
+    repo: https://open-telemetry.github.io/opentelemetry-helm-charts
+    version: 0.97.1
+    releaseName: otel-collector-agent
+    namespace: observability
+    valuesFile: values-agent.yaml
+    includeCRDs: true

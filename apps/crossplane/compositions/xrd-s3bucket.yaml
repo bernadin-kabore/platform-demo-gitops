@@ -1,0 +1,41 @@
+# Defines a simplified, self-service "S3Bucket" API that hides AWS-specific
+# fields behind a handful of inputs a developer (or the Backstage template)
+# can fill in — the same shape as every "hello-world-*" Backstage
+# template's optional storage input.
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xs3buckets.platform.acme.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  group: platform.acme.io
+  names:
+    kind: XS3Bucket
+    plural: xs3buckets
+  claimNames:
+    kind: S3Bucket
+    plural: s3buckets
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                parameters:
+                  type: object
+                  properties:
+                    region:
+                      type: string
+                      default: us-east-1
+                    versioning:
+                      type: boolean
+                      default: true
+                  required: []
+              required:
+                - parameters

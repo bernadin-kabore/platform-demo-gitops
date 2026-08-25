@@ -1,0 +1,37 @@
+# Helm values for the ArgoCD installation itself (argo/argo-cd chart).
+# Installed once, imperatively, to bootstrap everything else:
+#   helm upgrade --install argocd argo/argo-cd -n argocd --create-namespace -f bootstrap/argocd-values.yaml
+
+configs:
+  params:
+    server.insecure: false
+  cm:
+    # Let ArgoCD render Helm charts that also embed raw Kustomize/manifests
+    kustomize.buildOptions: "--enable-helm"
+    timeout.reconciliation: 180s
+  rbac:
+    policy.default: role:readonly
+    policy.csv: |
+      p, role:platform-admin, applications, *, */*, allow
+      p, role:platform-admin, clusters, get, *, allow
+      g, platform-admins, role:platform-admin
+
+server:
+  autoscaling:
+    enabled: false
+  ingress:
+    enabled: false # exposed via the Istio gateway instead, see apps/istio
+  extensions:
+    enabled: true # for the Argo Rollouts UI extension
+
+controller:
+  replicas: 1
+
+repoServer:
+  replicas: 1
+
+applicationSet:
+  enabled: true
+
+notifications:
+  enabled: true

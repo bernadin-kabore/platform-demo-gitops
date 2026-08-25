@@ -1,0 +1,32 @@
+# Every workload must self-identify with the labels the rest of the
+# platform depends on: OpenCost attributes cost by "team", ArgoCD/Backstage
+# link resources back to their catalog entry by "app.kubernetes.io/name",
+# and on-call tooling routes by "team".
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-labels
+  annotations:
+    policies.kyverno.io/title: Require Platform Labels
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: low
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-platform-labels
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, karpenter]
+      validate:
+        message: "Pods must carry app.kubernetes.io/name and team labels for cost attribution and catalog linkage."
+        pattern:
+          metadata:
+            labels:
+              app.kubernetes.io/name: "?*"
+              team: "?*"

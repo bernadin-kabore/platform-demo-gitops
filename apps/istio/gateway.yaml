@@ -1,0 +1,17 @@
+# Single shared Gateway every service's VirtualService attaches to by name
+# (istio-system/platform-gateway) — one NLB for the whole cluster instead of
+# one load balancer per service.
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: platform-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts: ["*.platform-demo.acme.io"]

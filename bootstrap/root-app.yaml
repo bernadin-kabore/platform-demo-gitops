@@ -1,0 +1,26 @@
+# The "app of apps" root. Applied once by hand after ArgoCD itself is
+# installed; every other Application (apps/*) is then reconciled by ArgoCD
+# from this repo automatically. Nothing else in this repo is ever applied
+# with kubectl/helm directly again.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
+    targetRevision: main
+    path: clusters/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

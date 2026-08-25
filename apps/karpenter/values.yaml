@@ -1,0 +1,15 @@
+# settings.clusterName / interruptionQueue / serviceAccount role-arn are
+# outputs of platform-demo-terraform-modules/envs/dev — fill in after `terraform apply`.
+settings:
+  clusterName: platform-demo
+  interruptionQueue: platform-demo-karpenter-interruption
+
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-karpenter-controller"
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+replicas: 1

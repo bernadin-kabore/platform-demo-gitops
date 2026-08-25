@@ -1,0 +1,41 @@
+# Defense in depth alongside require-signed-images: even before signature
+# verification runs, reject any image that isn't from our own ECR registry
+# or the small set of trusted upstream registries the platform itself pulls
+# from (Helm charts' images, etc).
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Restrict Image Registries
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: allowed-registries-app-namespaces
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argocd
+                - istio-system
+                - crossplane-system
+                - karpenter
+                - monitoring
+                - observability
+                - logging
+                - opencost
+      validate:
+        message: "Application images must come from our ECR registry."
+        pattern:
+          spec:
+            containers:
+              - image: "*.dkr.ecr.*.amazonaws.com/*"

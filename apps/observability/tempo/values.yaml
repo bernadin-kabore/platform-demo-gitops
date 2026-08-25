@@ -1,0 +1,20 @@
+# Single-binary Tempo: simplest deployment mode, fine for a demo cluster's
+# trace volume. Stores traces the otel-collector gateway sends via OTLP, and
+# exposes both its native API and a Jaeger-compatible query API that Kiali
+# consumes to render trace graphs.
+tempo:
+  retention: 24h
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+
+traces:
+  otlp:
+    grpc:
+      enabled: true
+    http:
+      enabled: true

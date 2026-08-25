@@ -1,0 +1,19 @@
+# Single-node, minimal-footprint Elasticsearch — this is a demo log store,
+# not a production logging cluster. Fed by the otel-collector DaemonSet
+# (apps/observability/otel-collector, values-agent.yaml).
+replicas: 1
+minimumMasterNodes: 1
+
+resources:
+  requests: { cpu: 250m, memory: 1Gi }
+  limits: { memory: 2Gi }
+
+volumeClaimTemplate:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 20Gi
+
+esConfig:
+  elasticsearch.yml: |
+    xpack.security.enabled: false # demo cluster only; enable + wire to an IdP for real use

@@ -1,0 +1,8 @@
+elasticsearchHosts: "http://elasticsearch-master:9200"
+
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+
+service:
+  type: ClusterIP # exposed to devs through the Backstage "Logs" tab via an
+                   # embedded Kibana discover-view iframe, not a public LB

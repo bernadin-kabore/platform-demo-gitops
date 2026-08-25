@@ -1,0 +1,1 @@
+{ "component": "otel-collector", "namespace": "observability", "path": "apps/observability/otel-collector" }

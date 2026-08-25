@@ -1,0 +1,44 @@
+# Sibling to applicationset.yaml, but for *application workloads* rather
+# than platform components: each services/<name>/config.json is dropped
+# here by one of the "hello-world-*" Backstage templates' GitOps PR step, and
+# points at the Helm chart living in that service's OWN repository — unlike
+# platform apps, application Helm values are not duplicated into this repo.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-services
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
+        revision: main
+        files:
+          - path: "services/**/config.json"
+  template:
+    metadata:
+      name: "{{.name}}"
+      labels:
+        team: "{{.owner}}"
+    spec:
+      project: platform
+      source:
+        repoURL: "{{.repoURL}}"
+        targetRevision: main
+        path: "{{.path}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{.namespace}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 5m

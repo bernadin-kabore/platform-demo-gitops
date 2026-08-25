@@ -1,0 +1,27 @@
+pilot:
+  autoscaleEnabled: false
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+
+meshConfig:
+  accessLogFile: /dev/stdout
+  enableTracing: true
+  defaultConfig:
+    tracing: {} # sidecar tracing config below points at the OTel collector
+    proxyStatsMatcher:
+      inclusionRegexps:
+        - ".*outlier_detection.*"
+        - ".*circuit_breakers.*"
+  extensionProviders:
+    - name: otel-tracing
+      opentelemetry:
+        service: otel-collector.observability.svc.cluster.local
+        port: 4317
+    - name: prometheus
+      prometheus: {}
+  defaultProviders:
+    tracing: ["otel-tracing"]
+    metrics: ["prometheus"]
+
+telemetry:
+  enabled: true
