@@ -1,0 +1,7 @@
+replicas: 1
+resourcesCrossplane:
+  requests: { cpu: 100m, memory: 256Mi }
+
+# Package-manager metrics scraped by Prometheus alongside everything else
+metrics:
+  enabled: true

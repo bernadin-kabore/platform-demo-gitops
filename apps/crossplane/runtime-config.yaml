@@ -1,0 +1,23 @@
+# Gives provider-aws's pod a ServiceAccount annotated for IRSA instead of
+# static AWS keys. Fill in the role ARN from:
+#   terraform -chdir=platform-demo-terraform-modules/envs/dev output -raw crossplane_provider_aws_role_arn
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: provider-aws
+  namespace: crossplane-system
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-crossplane-provider-aws"
+  labels:
+    argocd.argoproj.io/sync-wave: "1"
+---
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: provider-aws-runtime-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: provider-aws

@@ -1,0 +1,21 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Backstage
+platform-demo-backstage/dist-types/
+platform-demo-backstage/packages/*/dist/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

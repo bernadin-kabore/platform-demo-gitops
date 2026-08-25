@@ -1,0 +1,19 @@
+opencost:
+  exporter:
+    defaultClusterId: platform-demo
+    # Reads Prometheus metrics (kube-state-metrics + node exporter, already
+    # shipped by kube-prometheus-stack) to compute per-pod/namespace/team
+    # cost using live AWS pricing, attributed via the "team" label the
+    # require-labels Kyverno policy enforces on every pod.
+    extraEnv:
+      CLOUD_PROVIDER_API_KEY: ""
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-opencost"
+  prometheus:
+    external:
+      enabled: true
+      url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+
+ui:
+  enabled: true

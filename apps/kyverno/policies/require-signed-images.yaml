@@ -1,0 +1,52 @@
+# Blocks any image that wasn't signed by our own CI pipeline. Verification
+# is keyless: cosign signs in CI using the GitHub Actions OIDC token against
+# Fulcio (short-lived cert) + Rekor (transparency log), so there's no signing
+# key to leak or rotate. Kyverno re-verifies that exact identity at
+# admission time. See platform-demo-hello-world-template's ci.yml "sign" step
+# for the `cosign sign --yes` call this checks against.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/category: Software Supply Chain Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: false # verifyImages only makes sense at admission time
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-cosign-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argocd
+                - istio-system
+                - crossplane-system
+                - karpenter
+                - monitoring
+                - observability
+                - logging
+                - opencost
+      verifyImages:
+        - imageReferences:
+            - "*.dkr.ecr.*.amazonaws.com/*"
+          attestors:
+            - count: 1
+              entries:
+                - keyless:
+                    # every service repo runs the same ci.yml copied from
+                    # platform-demo-hello-world-template, but the repo name
+                    # itself is developer-chosen — wildcard it, not the org
+                    subject: "https://github.com/bernadin-kabore/*/.github/workflows/ci.yml@refs/heads/main"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev

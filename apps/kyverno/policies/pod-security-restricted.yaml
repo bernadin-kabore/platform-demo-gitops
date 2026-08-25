@@ -1,0 +1,41 @@
+# Enforces the full Kubernetes Pod Security Standards "restricted" profile
+# using Kyverno's native podSecurity check (equivalent to every control the
+# built-in Pod Security Admission "restricted" level enforces: no privilege
+# escalation, must run as non-root, seccomp RuntimeDefault, no hostPath/
+# hostNetwork/hostPID/hostIPC, dropped ALL capabilities, no privileged
+# containers). Applied cluster-wide except for the handful of namespaces
+# that legitimately need elevated access to manage the cluster itself.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: pod-security-restricted
+  annotations:
+    policies.kyverno.io/title: Pod Security Standards (Restricted)
+    policies.kyverno.io/category: Pod Security Standards (Restricted)
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Enforces the restricted Pod Security Standard profile on every
+      workload outside of infrastructure namespaces.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: restricted-pss
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+                - argocd
+                - istio-system
+                - crossplane-system
+                - karpenter
+      validate:
+        podSecurity:
+          level: restricted
+          version: latest

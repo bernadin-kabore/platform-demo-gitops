@@ -1,0 +1,33 @@
+# Cluster-scoped AnalysisTemplate reused by every Rollout in the cluster
+# (see platform-demo-hello-world-template/skeleton/chart/templates/rollout.yaml). Argo
+# Rollouts queries Prometheus for the canary's HTTP success rate via the
+# Istio sidecar metrics and automatically aborts/rolls back if it drops
+# below threshold, instead of a human watching a dashboard.
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterAnalysisTemplate
+metadata:
+  name: istio-success-rate
+spec:
+  args:
+    - name: service-name
+    - name: namespace
+  metrics:
+    - name: success-rate
+      interval: 30s
+      count: 5
+      successCondition: result[0] >= 0.95
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(istio_requests_total{
+              destination_service_name="{{args.service-name}}",
+              destination_service_namespace="{{args.namespace}}",
+              response_code!~"5.."
+            }[1m]))
+            /
+            sum(rate(istio_requests_total{
+              destination_service_name="{{args.service-name}}",
+              destination_service_namespace="{{args.namespace}}"
+            }[1m]))

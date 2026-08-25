@@ -1,0 +1,11 @@
+# Mesh-wide strict mTLS: no plaintext traffic between meshed workloads,
+# ever, no per-namespace opt-out. Pairs with the Kyverno policy that blocks
+# pods from being scheduled without the Istio sidecar injected.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT

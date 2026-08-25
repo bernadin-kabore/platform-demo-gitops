@@ -1,0 +1,21 @@
+replicaCount: 2
+
+admissionController:
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+
+backgroundController:
+  enabled: true # continuously re-scans existing resources, not just new admissions
+
+reportsController:
+  enabled: true # PolicyReport CRs, surfaced in Backstage via the Kubernetes plugin
+
+# Fail closed: if the webhook is unreachable, block the request rather than
+# silently letting it through. This is what makes the security posture real.
+config:
+  webhooks:
+    - failurePolicy: Fail
+
+metricsService:
+  create: true # scraped by Prometheus — policy pass/fail rate becomes a dashboard

@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Karpenter only publishes an OCI Helm chart. Kustomize's helm inflator
+# supports `repo: oci://...` from v5.3+; if the ArgoCD repo-server's bundled
+# kustomize predates that, install this one chart via a plain ArgoCD Helm
+# source (source.repoURL: oci://public.ecr.aws/karpenter/karpenter) instead
+# and keep only ec2nodeclass.yaml/nodepool-default.yaml here.
+helmCharts:
+  - name: karpenter
+    repo: oci://public.ecr.aws/karpenter/karpenter
+    version: 1.0.2
+    releaseName: karpenter
+    namespace: kube-system
+    valuesFile: values.yaml
+    includeCRDs: true
+
+resources:
+  - ec2nodeclass.yaml
+  - nodepool-default.yaml

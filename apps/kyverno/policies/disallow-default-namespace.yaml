@@ -1,0 +1,22 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-default-namespace
+  annotations:
+    policies.kyverno.io/title: Disallow Default Namespace
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: low
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-namespace
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      validate:
+        message: "Workloads may not be deployed into the 'default' namespace — every app gets its own namespace, provisioned by the Backstage template."
+        pattern:
+          metadata:
+            namespace: "!default"

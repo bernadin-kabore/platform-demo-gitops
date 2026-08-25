@@ -1,0 +1,12 @@
+# Same pattern as grafana-dashboard-istio.yaml — replace with real exported
+# JSON (Karpenter's official dashboard, id 20244, or your own) before use.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-karpenter
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  karpenter.json: |
+    { "title": "Karpenter Capacity Dashboard (replace with exported JSON, e.g. grafana.com dashboard 20244)" }

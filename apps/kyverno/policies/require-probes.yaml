@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-probes
+  annotations:
+    policies.kyverno.io/title: Require Liveness & Readiness Probes
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-liveness-readiness
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+      exclude:
+        any:
+          - resources:
+              namespaces: [kube-system, karpenter]
+      validate:
+        message: "Every container must define livenessProbe and readinessProbe, so Argo Rollouts' health checks and the Istio gateway's routing are meaningful."
+        pattern:
+          spec:
+            containers:
+              - livenessProbe: "?*"
+                readinessProbe: "?*"

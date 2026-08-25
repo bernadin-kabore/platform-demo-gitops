@@ -1,0 +1,16 @@
+# Placeholder ConfigMap wiring — the Grafana sidecar auto-loads any
+# ConfigMap in any namespace labeled grafana_dashboard=1. Replace `data`
+# with the actual dashboard JSON (e.g. exported from Grafana's official
+# "Istio Service Dashboard", id 7636, or your own) before applying for real;
+# committing the full JSON here keeps the whole platform's state in git
+# instead of a manual "import by ID" step done once and forgotten.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-istio-service
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  istio-service.json: |
+    { "title": "Istio Service Dashboard (replace with exported JSON, e.g. grafana.com dashboard 7636)" }

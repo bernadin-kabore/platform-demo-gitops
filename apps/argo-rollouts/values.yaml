@@ -1,0 +1,11 @@
+dashboard:
+  enabled: true
+
+controller:
+  replicas: 1
+  resources:
+    requests: { cpu: 50m, memory: 64Mi }
+
+# Renders Rollout progress inside the ArgoCD UI itself
+extensionInstaller:
+  enabled: true
