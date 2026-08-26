@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: workloads
+  namespace: argocd
+spec:
+  description: Developer workloads without cluster-scoped administration
+  sourceRepos:
+    - "https://github.com/*/*.git"
+  destinations:
+    - namespace: "*"
+      server: "https://kubernetes.default.svc"
+  namespaceResourceWhitelist:
+    - { group: "", kind: Service }
+    - { group: "", kind: ServiceAccount }
+    - { group: "", kind: ConfigMap }
+    - { group: "", kind: ResourceQuota }
+    - { group: "", kind: LimitRange }
+    - { group: networking.k8s.io, kind: NetworkPolicy }
+    - { group: autoscaling, kind: HorizontalPodAutoscaler }
+    - { group: argoproj.io, kind: Rollout }
+    - { group: networking.istio.io, kind: VirtualService }
+    - { group: networking.istio.io, kind: DestinationRule }
+    - { group: monitoring.coreos.com, kind: ServiceMonitor }
+    - { group: platform.acme.io, kind: S3Bucket }
+  orphanedResources:
+    warn: true

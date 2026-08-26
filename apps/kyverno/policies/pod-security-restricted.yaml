@@ -25,6 +25,9 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              namespaceSelector:
+                matchLabels:
+                  platform.acme.io/managed: "true"
       exclude:
         any:
           - resources:

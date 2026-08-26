@@ -22,7 +22,7 @@ spec:
       labels:
         team: "{{.owner}}"
     spec:
-      project: platform
+      project: workloads
       source:
         repoURL: "{{.repoURL}}"
         targetRevision: main
@@ -36,6 +36,13 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+        managedNamespaceMetadata:
+          labels:
+            platform.acme.io/managed: "true"
+            pod-security.kubernetes.io/enforce: restricted
+            pod-security.kubernetes.io/audit: restricted
+            pod-security.kubernetes.io/warn: restricted
+            istio-injection: enabled
         retry:
           limit: 5
           backoff:

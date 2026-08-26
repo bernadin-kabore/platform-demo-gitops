@@ -12,4 +12,13 @@ controller:
   resources:
     requests: { cpu: 100m, memory: 256Mi }
 
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
+
+nodeSelector:
+  node.kubernetes.io/role: system
+
 replicas: 1
