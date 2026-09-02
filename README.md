@@ -34,23 +34,47 @@ other app's files.
 | [karpenter](apps/karpenter) | `kube-system` | Just-in-time node autoscaling, spot-first |
 | [opencost](apps/opencost) | `opencost` | Real-time Kubernetes cost allocation by namespace/team |
 | [kube-prometheus-stack](apps/observability/kube-prometheus-stack) | `monitoring` | Prometheus + Grafana + Alertmanager |
-| [otel-collector](apps/observability/otel-collector) | `observability` | OTLP gateway (traces→Tempo, metrics→Prometheus) + node-level log agent (→Elasticsearch) |
+| [otel-collector](apps/observability/otel-collector) | `observability` | OTLP gateway (traces→Tempo, metrics→Prometheus, logs→Elasticsearch) + node-level log agent that ships container stdout to the gateway |
 | [tempo](apps/observability/tempo) | `observability` | Trace storage; Jaeger-compatible query API for Kiali |
 | [kiali](apps/observability/kiali) | `istio-system` | Service mesh topology + trace visualization |
 | [efk](apps/observability/efk) | `logging` | Elasticsearch + Kibana for centralized log search |
 
 ## Observability data flow
 
+All three signals converge on the **gateway**, so exactly one place in the
+platform knows which backends exist. Applications depend on the
+OpenTelemetry contract alone and never name Tempo, Prometheus or
+Elasticsearch.
+
 ```
-App (OTel SDK) ──OTLP──┐
-Istio sidecars ──OTLP──┼─► otel-collector (gateway) ──► Tempo ──► Kiali (traces)
-                        └─► otel-collector (gateway) ──► Prometheus ──► Grafana (metrics)
-Container stdout ──────────► otel-collector (agent/DaemonSet) ──► Elasticsearch ──► Kibana (logs)
+traces    app (OTel SDK)     --OTLP-->  gateway  -->  Tempo          -->  Grafana / Kiali
+metrics   app (OTel SDK)     --OTLP-->  gateway  -->  Prometheus     -->  Grafana        (remote write)
+logs      app stdout (JSON)  --> agent (DaemonSet) --OTLP--> gateway --> Elasticsearch --> Kibana
 ```
+
+**Log/trace correlation.** Services emit structured JSON containing
+`trace_id` and `span_id`; the agent's `filelog` receiver promotes those to
+first-class log-record IDs, which is what lets Grafana pivot from an error
+log straight to its trace. Non-JSON lines - panics, JVM stack traces,
+pre-logger startup output - pass through unparsed rather than being dropped.
+
+**Why logs are collected rather than pushed by the SDK:** records buffered
+inside a process are lost when it crashes, and crash logs matter most. The
+container runtime has already written the line to disk before anything dies.
+
+**Why metrics use remote write rather than a scraped exporter:** with two
+gateway replicas a scrape-based exporter gives Prometheus two targets each
+holding a partial view, and series migrate between them as applications
+rebalance, churning the instance label. Remote write presents one logical
+destination instead.
 
 Kiali needs a Jaeger-API-compatible trace store; Tempo provides that while
 staying fully OTLP-native end to end, so it's the natural pairing rather
 than standing up a separate Jaeger.
+
+The reasoning behind each of these choices, including the options rejected
+and what they cost, is recorded in
+[`docs/observability/README.md`](docs/observability/README.md).
 
 ## Bootstrap (one time, per cluster)
 
@@ -67,14 +91,20 @@ helm upgrade --install argocd argo/argo-cd -n argocd --create-namespace \
 # 2. Create the AppProject and the root Application — everything else
 #    cascades from here automatically
 kubectl apply -f bootstrap/project.yaml
+kubectl apply -f clusters/dev/workloads-project.yaml
 kubectl apply -f bootstrap/root-app.yaml
 ```
 
-Before step 2, replace the placeholder `REPLACE_ACCOUNT_ID` / role ARNs in
-`apps/crossplane/runtime-config.yaml`, `apps/karpenter/values.yaml`, and
-`apps/opencost/values.yaml` with the real outputs of
-`terraform -chdir=platform-demo-terraform-modules/envs/dev output`, and the placeholder
-`bernadin-kabore` repo URLs throughout with your actual GitHub org.
+The IRSA role ARNs in `apps/crossplane/runtime-config.yaml`,
+`apps/karpenter/values.yaml` and `apps/opencost/values.yaml` are populated
+for the current dev account. **Deploying into a different AWS account means
+replacing that account ID** with the real outputs of
+`terraform -chdir=platform-demo-terraform-modules/envs/dev output`.
+
+Forking also means replacing the `bernadin-kabore` repo URLs throughout with
+your own GitHub org - including `targetRevision` in
+`bootstrap/root-app.yaml` and `clusters/dev/applicationset.yaml`, which pin
+the branch ArgoCD actually reads.
 
 ## Why Kustomize + Helm inflation instead of ArgoCD Helm sources directly
 
