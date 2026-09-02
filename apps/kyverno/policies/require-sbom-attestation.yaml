@@ -34,6 +34,7 @@ spec:
                 - observability
                 - logging
                 - opencost
+                - argo-rollouts
       verifyImages:
         - imageReferences:
             - "*.dkr.ecr.*.amazonaws.com/*"
