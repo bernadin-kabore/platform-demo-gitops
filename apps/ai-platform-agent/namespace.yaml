@@ -1,0 +1,20 @@
+# The platform-apps ApplicationSet syncs with CreateNamespace=true but, unlike
+# the services ApplicationSet, sets no managedNamespaceMetadata — platform
+# components differ too much from one another for a single label set. So this
+# namespace declares its own, and by declaring platform.acme.io/managed it opts
+# the agent into the same admission policies every application workload is held
+# to: restricted pod security, required labels, probes, and resource limits.
+#
+# Opting in is deliberate. This component can open pull requests across the
+# whole platform; exempting it from the platform's own rules would be exactly
+# backwards.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-platform
+  labels:
+    platform.acme.io/managed: "true"
+    istio-injection: enabled
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
