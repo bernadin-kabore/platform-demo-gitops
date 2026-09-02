@@ -33,6 +33,7 @@ spec:
                 - observability
                 - logging
                 - opencost
+                - argo-rollouts
       validate:
         message: "Application images must come from our ECR registry."
         pattern:

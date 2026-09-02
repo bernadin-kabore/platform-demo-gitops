@@ -7,7 +7,7 @@ metadata:
   name: provider-aws
   namespace: crossplane-system
   annotations:
-    eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-crossplane-provider-aws"
+    eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-crossplane-provider-aws"
   labels:
     argocd.argoproj.io/sync-wave: "1"
 ---
