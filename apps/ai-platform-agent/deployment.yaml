@@ -45,7 +45,10 @@ spec:
           # Pinned by digest as well as tag: Kyverno's verifyImages resolves by
           # digest regardless, and pinning it here means the manifest records
           # exactly which signed artifact was approved in the deploy PR.
-          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/ai-platform-agent:0.1.0
+          # The ECR repository is named after the GitHub repository, because
+          # compositions/service-delivery-foundation keys both off the same map
+          # entry — see platform-demo-terraform-modules/envs/dev/terraform.tfvars.
+          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/platform-demo-ai-agent:0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
