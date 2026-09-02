@@ -12,5 +12,10 @@ spec:
     matchLabels:
       app.kubernetes.io/name: opentelemetry-collector
   endpoints:
-    - port: prometheus
+    # The collector's OWN telemetry (otelcol_receiver_accepted_*,
+    # otelcol_exporter_send_failed_*, queue size), served on 8888. This is
+    # not application telemetry — app metrics reach Prometheus by remote
+    # write from the gateway. These series are how pipeline health is
+    # measured, including the queue behaviour the Kafka decision rests on.
+    - port: metrics
       interval: 15s

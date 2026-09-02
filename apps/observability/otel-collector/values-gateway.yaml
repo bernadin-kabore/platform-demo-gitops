@@ -1,8 +1,17 @@
+# Gateway: the single place that knows which observability backends exist.
+# Receives OTLP from application SDKs (traces, metrics) and from the agent
+# DaemonSet (logs), then fans out to Tempo, Prometheus and Elasticsearch.
+# Applications never name a backend — that is the whole point of the
+# OpenTelemetry contract.
 mode: deployment
 replicaCount: 2
 
 resources:
   requests: { cpu: 200m, memory: 256Mi }
+
+presets:
+  kubernetesAttributes:
+    enabled: true
 
 ports:
   otlp:
@@ -15,11 +24,6 @@ ports:
     containerPort: 4318
     servicePort: 4318
     protocol: TCP
-  prometheus:
-    enabled: true
-    containerPort: 8889
-    servicePort: 8889
-    protocol: TCP
 
 config:
   receivers:
@@ -31,19 +35,56 @@ config:
           endpoint: 0.0.0.0:4318
 
   processors:
-    batch: {}
     memory_limiter:
       check_interval: 5s
       limit_percentage: 80
-    k8sattributes: {} # enriches every span/metric with pod/namespace/deployment labels
+    batch: {}
+    # Enriches every signal with pod, namespace, deployment and node
+    # metadata. Applications deliberately do NOT set these themselves —
+    # anything Kubernetes can discover is discovered here rather than
+    # duplicated in application configuration.
+    k8sattributes: {}
 
   exporters:
     otlp/tempo:
       endpoint: tempo.observability.svc.cluster.local:4317
       tls:
         insecure: true
-    prometheus:
-      endpoint: 0.0.0.0:8889
+      sending_queue:
+        enabled: true
+      retry_on_failure:
+        enabled: true
+
+    # Remote write rather than the `prometheus` exporter: with two gateway
+    # replicas, a scrape-based exporter gives Prometheus two targets each
+    # holding a partial view, and series move between them as apps rebalance
+    # across replicas — producing instance-label churn and broken rate()
+    # windows. Remote write presents one logical destination instead.
+    # Requires enableRemoteWriteReceiver on the Prometheus side.
+    prometheusremotewrite:
+      endpoint: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+      # Copies resource attributes (service.name, k8s.namespace.name, ...)
+      # onto each series so metrics are filterable by the same dimensions as
+      # traces and logs.
+      resource_to_telemetry_conversion:
+        enabled: true
+      sending_queue:
+        enabled: true
+      retry_on_failure:
+        enabled: true
+
+    # Elasticsearch remains the searchable log store — see decision 4 in
+    # docs/observability/README.md. When the Kafka/Vector pipeline lands,
+    # this exporter is replaced by a Kafka exporter and Vector takes over
+    # writing here.
+    elasticsearch/logs:
+      endpoints: ["http://elasticsearch-master.logging.svc.cluster.local:9200"]
+      logs_index: logs
+      sending_queue:
+        enabled: true
+      retry_on_failure:
+        enabled: true
+        max_requests: 5
 
   service:
     pipelines:
@@ -54,4 +95,8 @@ config:
       metrics:
         receivers: [otlp]
         processors: [memory_limiter, k8sattributes, batch]
-        exporters: [prometheus]
+        exporters: [prometheusremotewrite]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, k8sattributes, batch]
+        exporters: [elasticsearch/logs]
