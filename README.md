@@ -13,7 +13,9 @@ clusters/dev/            Two ApplicationSets: one discovers apps/**/config.json
                           (application workloads)
 apps/<name>/              One platform component: a kustomization.yaml that
                           Helm-inflates the upstream chart (kustomize --enable-helm)
-                          plus any raw manifests (CRs, policies) it needs
+                          plus any raw manifests (CRs, policies) it needs — or,
+                          for first-party components with no upstream chart
+                          (ai-platform-agent), raw manifests alone
 services/<name>/config.json  One deployed application — points ArgoCD at that
                           service's OWN repo + Helm chart, see services/README.md
 ```
@@ -27,6 +29,7 @@ other app's files.
 
 | Component | Namespace | What it does |
 |---|---|---|
+| [ai-platform-agent](apps/ai-platform-agent) | `ai-platform` | The AI Platform Agent: turns a natural-language request from Backstage into pull requests across the four platform repos, gated by its own eval suite |
 | [istio](apps/istio) | `istio-system` | Service mesh: mTLS (STRICT), ingress gateway, telemetry export |
 | [argo-rollouts](apps/argo-rollouts) | `argo-rollouts` | Canary/blue-green progressive delivery, with a Prometheus-backed AnalysisTemplate |
 | [crossplane](apps/crossplane) | `crossplane-system` | Self-service AWS resource provisioning from inside the cluster (sample: `S3Bucket` claim) |

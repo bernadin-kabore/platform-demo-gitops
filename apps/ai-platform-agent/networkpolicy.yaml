@@ -1,0 +1,64 @@
+# Istio's PeerAuthentication STRICT already gives this component mutual TLS with
+# everything in the mesh. NetworkPolicy is the layer underneath that, and it
+# answers a different question: not "is the caller authenticated" but "can this
+# pod reach the internet at all".
+#
+# It matters more here than for a typical workload. This is the one component
+# that holds a GitHub App private key and talks to a large language model, so
+# the blast radius of a compromise is "opens pull requests" plus whatever it can
+# reach on the network. Constraining the second half is cheap.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-platform-agent
+  labels:
+    app.kubernetes.io/name: ai-platform-agent
+    team: platform-team
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ai-platform-agent
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Only Backstage starts a run. Nothing else in the cluster has a reason to.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: backstage
+      ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # Telemetry to the collector gateway.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+      ports:
+        - port: 4317
+          protocol: TCP
+    # Bedrock (bedrock-mantle.<region>.api.aws) and the GitHub API. Neither has
+    # a stable address range worth encoding here, so this is HTTPS to anywhere —
+    # a real narrowing over "all egress" but not a precise one. Tightening it
+    # properly means an egress gateway with hostname-based rules, which is an
+    # Istio change rather than a NetworkPolicy one; recorded rather than faked.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32 # IMDS: IRSA uses a projected token, not the instance role
+      ports:
+        - port: 443
+          protocol: TCP

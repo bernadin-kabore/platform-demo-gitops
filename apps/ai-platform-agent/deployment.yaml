@@ -1,0 +1,153 @@
+# The AI Platform Agent. See platform-demo-ai-agent for what it does and why it
+# is shaped this way.
+#
+# A plain Deployment rather than an Argo Rollout, unlike every application
+# workload. Canary analysis works by splitting request traffic between two
+# revisions and comparing error rates, and this service handles a handful of
+# long-running requests a day — there is no traffic to split and no signal to
+# analyse before the pause expires. A Rollout here would be ceremony that
+# produces a worse deploy than a rolling update.
+#
+# The image tag and digest are bumped by an automated pull request from
+# platform-demo-ai-agent's ci.yml, which a human merges. Nothing pushes
+# straight to this repository's main.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-platform-agent
+  labels:
+    app.kubernetes.io/name: ai-platform-agent
+    app.kubernetes.io/part-of: platform-engineering-demo
+    team: platform-team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ai-platform-agent
+  template:
+    metadata:
+      labels:
+        # require-labels enforces both of these on every pod in a namespace
+        # labelled platform.acme.io/managed. "team" is also what OpenCost
+        # attributes this component's Bedrock-driven CPU time by.
+        app.kubernetes.io/name: ai-platform-agent
+        app.kubernetes.io/version: "0.1.0"
+        team: platform-team
+    spec:
+      serviceAccountName: ai-platform-agent
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          # Pinned by digest as well as tag: Kyverno's verifyImages resolves by
+          # digest regardless, and pinning it here means the manifest records
+          # exactly which signed artifact was approved in the deploy PR.
+          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/ai-platform-agent:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: AWS_REGION
+              value: us-east-1
+            - name: AGENT_MODEL
+              value: anthropic.claude-opus-5
+            - name: PLATFORM_ENVIRONMENT
+              value: dev
+            - name: GITHUB_OWNER
+              value: bernadin-kabore
+            - name: EVAL_MIN_SCORE
+              value: "0.8"
+
+            # Platform-owned telemetry configuration, identical in shape to what
+            # the shared service chart injects. The agent depends on the OTLP
+            # contract and never names Tempo, Prometheus or Elasticsearch.
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector-gateway.observability.svc.cluster.local:4317
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: ai-platform-agent
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.namespace=platform-team,deployment.environment=dev
+
+            # ---------------------------------------------------------------
+            # The one manual step in this whole component, and it is a known
+            # gap rather than an oversight.
+            #
+            # This Secret is NOT in Git and is not created by anything here.
+            # The platform has no secrets-delivery mechanism at all — External
+            # Secrets is item 1 of PLATFORM_ROADMAP.md Part 2 and does not
+            # exist yet — so the GitHub App credentials have to be applied by
+            # hand once:
+            #
+            #   kubectl -n ai-platform create secret generic ai-platform-agent-github-app \
+            #     --from-literal=app-id=<numeric App ID> \
+            #     --from-literal=installation-id=<numeric installation ID> \
+            #     --from-file=private-key=<path to the App's .pem>
+            #
+            # When External Secrets lands, this block becomes an ExternalSecret
+            # pointing at Secrets Manager and the manual step disappears. That
+            # is the whole argument for doing roadmap item 1 next, made
+            # concrete: this is the second component to need it, after Grafana's
+            # admin password.
+            #
+            # Note what is deliberately absent: there is no Anthropic API key
+            # here. Bedrock is reached through IRSA, so the model credential
+            # needs no delivery mechanism at all.
+            # ---------------------------------------------------------------
+            - name: PLATFORM_AI_AGENT_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-platform-agent-github-app
+                  key: app-id
+            - name: PLATFORM_AI_AGENT_INSTALLATION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ai-platform-agent-github-app
+                  key: installation-id
+            - name: PLATFORM_AI_AGENT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ai-platform-agent-github-app
+                  key: private-key
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      # An orchestrator run takes minutes. Cutting one off mid-flight leaves a
+      # branch pushed with no pull request on it, which is recoverable but
+      # confusing; giving the pod time to finish what it started is cheaper
+      # than explaining the orphan later.
+      terminationGracePeriodSeconds: 120
