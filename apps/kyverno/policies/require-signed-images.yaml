@@ -2,8 +2,24 @@
 # is keyless: cosign signs in CI using the GitHub Actions OIDC token against
 # Fulcio (short-lived cert) + Rekor (transparency log), so there's no signing
 # key to leak or rotate. Kyverno re-verifies that exact identity at
-# admission time. See platform-demo-hello-world-template's ci.yml "sign" step
-# for the `cosign sign --yes` call this checks against.
+# admission time.
+#
+# The identity below is one exact file:
+# platform-demo-hello-world-template/.github/workflows/service-build.yml.
+# Signing happens inside that reusable workflow, and Fulcio takes the
+# certificate subject from the OIDC token's job_workflow_ref claim — which for
+# a reusable workflow is the reusable workflow's own ref, not the caller's. So
+# every application repository on the platform, whatever it is called and
+# whatever languages it holds, signs as that single subject.
+#
+# This replaced the wildcard `bernadin-kabore/*/.github/workflows/ci.yml`,
+# which was necessary while every service repository carried its own copy of
+# the pipeline and therefore signed under its own name. Any repository in the
+# account with a ci.yml on main satisfied it. Pinning the platform's own
+# workflow is strictly tighter.
+#
+# Changing the name, path or branch of service-build.yml changes the recorded
+# subject and every pod is refused here until this policy matches again.
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
@@ -47,7 +63,7 @@ spec:
                     # every service repo runs the same ci.yml copied from
                     # platform-demo-hello-world-template, but the repo name
                     # itself is developer-chosen — wildcard it, not the org
-                    subject: "https://github.com/bernadin-kabore/*/.github/workflows/ci.yml@refs/heads/main"
+                    subject: "https://github.com/bernadin-kabore/platform-demo-hello-world-template/.github/workflows/service-build.yml@refs/heads/main"
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev

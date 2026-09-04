@@ -1,0 +1,67 @@
+# How an application gets onto the cluster.
+#
+# Sibling to applicationset.yaml, but one level of indirection higher. That one
+# discovers *platform components* in this repository. This one discovers
+# *applications*, which do not live in this repository at all: each has its own
+# GitOps repository holding its own deployment state and its own ApplicationSet.
+#
+#   applications/<app>.json          (here — one pointer, added by the scaffolder)
+#             |
+#             v
+#   <app>-gitops/argocd/applicationset.yaml   (there — the app's own topology)
+#             |
+#             v
+#   one Application per service per environment, in the workloads project
+#
+# What this file predates: a single `platform-services` ApplicationSet that
+# read services/*/config.json here and pointed ArgoCD at each service's *source*
+# repository, deploying the chart/ directory that lived next to the code. That
+# arrangement had no separation between the repository holding code and the
+# repository holding deployment state — the source pipeline advanced deployment
+# by pushing a commit to its own protected branch. An application now owns a
+# GitOps repository, and the only way its images move is a pull request.
+#
+# Registration stays here, in a repository only the platform team can merge to,
+# because "which applications exist" is a platform decision. Everything after
+# registration belongs to the team.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform-applications
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
+        revision: main
+        files:
+          - path: "applications/*.json"
+  template:
+    metadata:
+      name: "{{.application}}-delivery"
+      labels:
+        team: "{{.owner}}"
+        platform.acme.io/application: "{{.application}}"
+    spec:
+      # Not `platform` and not `workloads`. See app-delivery-project.yaml: this
+      # project can create exactly one kind of resource — an ApplicationSet —
+      # and only in the argocd namespace. It cannot touch a workload.
+      project: app-delivery
+      source:
+        repoURL: "{{.gitopsRepoURL}}"
+        targetRevision: main
+        path: argocd
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 5
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 5m

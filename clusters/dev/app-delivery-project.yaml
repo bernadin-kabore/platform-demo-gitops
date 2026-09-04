@@ -1,0 +1,41 @@
+# The narrowest AppProject on the cluster, and the one that makes it safe to
+# let applications own their own delivery topology.
+#
+# An application's GitOps repository contains an ApplicationSet describing how
+# its services are deployed. Something has to apply that ApplicationSet, and
+# whatever applies it is reading a repository the platform team does not
+# control. So it runs here, in a project that can create exactly one kind of
+# object — an ApplicationSet — in exactly one namespace.
+#
+# What this deliberately cannot do: create a Deployment, a Rollout, a Secret,
+# an RBAC binding, or anything at all outside argocd. If an application
+# repository were compromised and its argocd/ directory replaced with a
+# manifest granting cluster-admin, this project would refuse to apply it.
+#
+# What it does not protect against, stated plainly: the ApplicationSet it
+# applies generates Applications, and those Applications name the project they
+# run under. The application's own validate.yml refuses any project other than
+# `workloads`, and the GitOps repository requires a reviewed pull request — but
+# that is a check in the application's repository, not an admission control in
+# the cluster. Someone who can merge to an application's GitOps repository can
+# widen the project its workloads run under. Closing that properly needs
+# ArgoCD's ApplicationSet template patch restrictions or an admission policy on
+# Application resources, and is worth doing before this pattern carries
+# anything that matters.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: app-delivery
+  namespace: argocd
+spec:
+  description: Applies each application's own ApplicationSet, and nothing else
+  sourceRepos:
+    - "https://github.com/bernadin-kabore/*-gitops.git"
+  destinations:
+    - namespace: argocd
+      server: "https://kubernetes.default.svc"
+  namespaceResourceWhitelist:
+    - group: argoproj.io
+      kind: ApplicationSet
+  orphanedResources:
+    warn: true

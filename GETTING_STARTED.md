@@ -133,14 +133,18 @@ az_count            = 2
 # Replace this with the public IP/CIDR used by the operator.
 admin_cidrs = ["YOUR_PUBLIC_IP/32"]
 
-services = {
-  hello-world = {
-    github_owner = "YOUR_GITHUB_OWNER"
-  }
-}
+# One entry per application the Backstage scaffolder has created. Each produces
+# one ECR repository per service, named <application>-<service>, and one CI role
+# for the application federated from <application>-source on main. Leave it
+# empty until you have scaffolded something.
+applications = {}
 
-# Disable the deprecated compatibility input when using services.
-ecr_repository_names = []
+# The platform's own single-image repositories, which are not applications and
+# keep their repository's own name because platform-demo-gitops references them
+# that way.
+platform_services = {
+  platform-demo-ai-agent = { github_owner = "YOUR_GITHUB_OWNER" }
+}
 
 owner = "YOUR_NAME_OR_TEAM"
 ```
@@ -278,46 +282,66 @@ This requires the optional Argo CD CLI. Alternatively, read and decode the
 
 For each service listed in `terraform.tfvars`, get its ECR URL and CI role:
 
-```powershell
-Set-Location "$workspace\platform-demo-terraform-modules\envs\dev"
-terraform output -json ecr_repository_urls
-terraform output -json service_ci_role_arns
+First, tell Terraform the application exists. It creates one ECR repository per
+service and one CI role for the application, so nothing can be pushed until it
+has run. In `envs/dev/terraform.tfvars`:
+
+```hcl
+applications = {
+  checkout-platform = {
+    github_owner = "YOUR_GITHUB_OWNER"
+    services     = ["frontend", "auth", "payments", "worker"]
+  }
+}
 ```
 
-Configure the service repository:
+Then apply, and read back what it made:
+
+```powershell
+Set-Location "$workspace\platform-demo-terraform-modules\envs\dev"
+terraform apply
+terraform output -json ecr_repository_urls
+terraform output -json ci_role_arns
+```
+
+The scaffolder sets `ECR_REGISTRY` and `AWS_REGION` on the source repository
+itself, so only the role ARN has to be set by hand. Note that the pipeline
+derives each service's image repository as
+`<ECR_REGISTRY>/<application>-<service>` — the same convention Terraform names
+them by — so there is no per-service variable to configure.
 
 | Name | Type | Value |
 |---|---|---|
-| `AWS_REGION` | Repository variable | The Terraform `aws_region`, such as `us-east-1` |
-| `ECR_REPOSITORY` | Repository variable | `ecr_repository_urls["SERVICE_NAME"]` |
-| `AWS_CI_ROLE_ARN` | Repository secret | `service_ci_role_arns["SERVICE_NAME"]` |
+| `AWS_REGION` | Repository variable | Set by the scaffolder |
+| `ECR_REGISTRY` | Repository variable | Set by the scaffolder; the registry host only, no repository path |
+| `AWS_CI_ROLE_ARN` | Repository secret | `ci_role_arns["APPLICATION_NAME"]` |
 
-With GitHub CLI, an example for `hello-world` is:
+With GitHub CLI, an example for `checkout-platform`:
 
 ```powershell
-$repo = "YOUR_GITHUB_OWNER/hello-world"
-$ecr = terraform output -json ecr_repository_urls | ConvertFrom-Json
-$roles = terraform output -json service_ci_role_arns | ConvertFrom-Json
+$repo = "YOUR_GITHUB_OWNER/checkout-platform-source"
+$roles = terraform output -json ci_role_arns | ConvertFrom-Json
 
-gh variable set AWS_REGION --repo $repo --body "us-east-1"
-gh variable set ECR_REPOSITORY --repo $repo --body $ecr.'hello-world'
-gh secret set AWS_CI_ROLE_ARN --repo $repo --body $roles.'hello-world'
+gh secret set AWS_CI_ROLE_ARN --repo $repo --body $roles.'checkout-platform'
 ```
 
-The workflow also expects these GitHub App secrets for its automated chart
-update commit:
+The pipeline also expects these GitHub App secrets, which it uses to open its
+pull request against the application's GitOps repository:
 
 - `PLATFORM_DEPLOY_BOT_APP_ID`
 - `PLATFORM_DEPLOY_BOT_PRIVATE_KEY`
 
-They are not Terraform outputs. Create and install the GitHub App separately,
-give it repository contents permission, and store its App ID and private key
-in each generated service repository. Until that is done, the
-`update-manifests` job cannot push the image digest back to the service chart.
+They are not Terraform outputs. Create and install the GitHub App separately and
+give it pull-request and contents permission on the GitOps repository. It needs
+no ruleset bypass anywhere — it opens pull requests and merges nothing. Until it
+is configured, builds succeed and images are published, but no deployment pull
+request is opened.
 
-Ensure the chart's `image.repository` is the same ECR URL and add a service
-registration file under `platform-demo-gitops/services/SERVICE_NAME/config.json`.
-The service ApplicationSet will deploy it after that GitOps change is merged.
+Finally, merge the registration pull request the scaffolder opened against
+`platform-demo-gitops`. It adds one `applications/<application>.json`, and that
+is what makes ArgoCD read the application's own GitOps repository and start
+deploying. Until it is merged, both repositories exist and CI works, and nothing
+is running.
 
 ## 9. Backstage status and optional local setup
 
