@@ -48,7 +48,7 @@ spec:
                     # every service repo runs the same ci.yml copied from
                     # platform-demo-hello-world-template, but the repo name
                     # itself is developer-chosen — wildcard it, not the org
-                    subject: "https://github.com/bernadin-kabore/*/.github/workflows/ci.yml@refs/heads/main"
+                    subject: "https://github.com/bernadin-kabore/platform-demo-hello-world-template/.github/workflows/service-build.yml@refs/heads/main"
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev
@@ -58,5 +58,5 @@ spec:
                 - count: 1
                   entries:
                     - keyless:
-                        subject: "https://github.com/bernadin-kabore/*/.github/workflows/ci.yml@refs/heads/main"
+                        subject: "https://github.com/bernadin-kabore/platform-demo-hello-world-template/.github/workflows/service-build.yml@refs/heads/main"
                         issuer: "https://token.actions.githubusercontent.com"

@@ -7,23 +7,43 @@ the one-time bootstrap.
 ## How it's wired
 
 ```
-bootstrap/               ArgoCD itself + the AppProject + the "root" Application
+bootstrap/               ArgoCD itself + the AppProjects + the "root" Application
 clusters/dev/            Two ApplicationSets: one discovers apps/**/config.json
-                          (platform components), the other services/**/config.json
-                          (application workloads)
+                          (platform components), the other applications/*.json
+                          (whole applications, deployed from their own repos)
 apps/<name>/              One platform component: a kustomization.yaml that
                           Helm-inflates the upstream chart (kustomize --enable-helm)
                           plus any raw manifests (CRs, policies) it needs — or,
                           for first-party components with no upstream chart
                           (ai-platform-agent), raw manifests alone
-services/<name>/config.json  One deployed application — points ArgoCD at that
-                          service's OWN repo + Helm chart, see services/README.md
+applications/<app>.json   One registered application: three facts pointing at
+                          its own GitOps repository, see applications/README.md
 ```
 
 Adding a new platform component is: create `apps/<name>/{config.json,
 kustomization.yaml,values.yaml}`, open a PR. The ApplicationSet in
 `clusters/dev` picks it up automatically — no change to bootstrap or to any
 other app's files.
+
+## Platform components live here; application deployment state does not
+
+The two halves of this repository are governed differently on purpose.
+
+`apps/` is the platform. Its Helm values live here because the platform team
+owns them, and a change to Istio or Kyverno is a change to everyone.
+
+`applications/` is only a registry. Each entry names an application's own
+GitOps repository, which holds that application's chart, its per-environment
+values, its per-service image references, and the ApplicationSet that turns all
+of that into deployments. A team adds a service, raises a memory limit, or
+promotes a release to production without ever opening a pull request here.
+
+This replaced an earlier model in which `services/<name>/config.json` pointed
+ArgoCD at each service's *source* repository and deployed the `chart/`
+directory sitting next to the code. There was no separation between code and
+deployment state, and the source pipeline advanced deployments by pushing a
+commit to its own protected branch. Applications now deploy from a repository
+that holds nothing but desired state, reached only by pull request.
 
 ## Components
 
