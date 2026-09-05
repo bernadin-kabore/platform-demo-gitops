@@ -15,7 +15,15 @@ spec:
   amiSelectorTerms:
     - alias: al2023@latest
   amiFamily: AL2023
-  role: "platform-demo-karpenter-node" # module.karpenter_iam.node_role_arn's role name
+  # instanceProfile, not role. With `role`, Karpenter v1 creates and manages an
+  # instance profile itself (named platform-demo_<hash>), which needs
+  # iam:GetInstanceProfile/CreateInstanceProfile/AddRoleToInstanceProfile on the
+  # controller role — permissions it does not have, so it 403s and the NodePool
+  # never goes Ready. Terraform already creates this instance profile
+  # (module.karpenter_iam, output karpenter_node_instance_profile_name), and
+  # this repository's standing rule is that Terraform owns the AWS-side trust
+  # boundary. Referencing it keeps IAM out of the cluster's runtime.
+  instanceProfile: "platform-demo-karpenter-node"
   subnetSelectorTerms:
     - tags:
         karpenter.sh/discovery: platform-demo
