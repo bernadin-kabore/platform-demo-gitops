@@ -9,6 +9,11 @@ prometheus:
     serviceMonitorSelectorNilUsesHelmValues: false
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
+    # Application metrics arrive by OTLP push through the otel-collector
+    # gateway, which remote-writes them here. Scraping the gateway instead
+    # would expose two partial targets (one per replica) and churn the
+    # instance label as apps rebalance. See apps/observability/otel-collector.
+    enableRemoteWriteReceiver: true
 
 alertmanager:
   enabled: true

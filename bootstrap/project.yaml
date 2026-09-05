@@ -7,9 +7,6 @@ spec:
   description: Platform add-ons and application workloads for the demo cluster
   sourceRepos:
     - "https://github.com/*/platform-demo-gitops.git"
-    - "*" # every service repo the hello-world-* templates create has a
-          # developer-chosen name, plus third-party Helm chart repos referenced
-          # by apps/*/kustomization.yaml — both need this wildcard
   destinations:
     - namespace: "*"
       server: "https://kubernetes.default.svc"

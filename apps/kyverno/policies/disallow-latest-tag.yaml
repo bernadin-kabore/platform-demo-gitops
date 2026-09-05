@@ -15,6 +15,9 @@ spec:
         any:
           - resources:
               kinds: [Pod]
+              namespaceSelector:
+                matchLabels:
+                  platform.acme.io/managed: "true"
       validate:
         message: "Images must be pinned to an immutable tag or digest, not ':latest' or untagged."
         pattern:

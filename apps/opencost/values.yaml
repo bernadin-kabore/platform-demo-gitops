@@ -9,7 +9,7 @@ opencost:
       CLOUD_PROVIDER_API_KEY: ""
     serviceAccount:
       annotations:
-        eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-opencost"
+        eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-opencost"
   prometheus:
     external:
       enabled: true

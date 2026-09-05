@@ -17,6 +17,11 @@ configs:
       g, platform-admins, role:platform-admin
 
 server:
+  tolerations: &systemTolerations
+    - key: CriticalAddonsOnly
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
   autoscaling:
     enabled: false
   ingress:
@@ -26,12 +31,19 @@ server:
 
 controller:
   replicas: 1
+  tolerations: *systemTolerations
 
 repoServer:
   replicas: 1
+  tolerations: *systemTolerations
 
 applicationSet:
   enabled: true
+  tolerations: *systemTolerations
 
 notifications:
   enabled: true
+  tolerations: *systemTolerations
+
+redis:
+  tolerations: *systemTolerations

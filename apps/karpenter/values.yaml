@@ -6,10 +6,19 @@ settings:
 
 serviceAccount:
   annotations:
-    eks.amazonaws.com/role-arn: "arn:aws:iam::REPLACE_ACCOUNT_ID:role/platform-demo-karpenter-controller"
+    eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-karpenter-controller"
 
 controller:
   resources:
     requests: { cpu: 100m, memory: 256Mi }
+
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
+
+nodeSelector:
+  node.kubernetes.io/role: system
 
 replicas: 1

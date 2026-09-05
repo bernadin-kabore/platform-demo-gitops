@@ -1,3 +1,13 @@
+# Agent: one pod per node. Tails container stdout via the filelog receiver and
+# forwards to the gateway over OTLP — it no longer writes to Elasticsearch
+# directly, so every signal now converges on the gateway and there is exactly
+# one place that knows which backends exist.
+#
+# Why filelog rather than SDK log export: records buffered inside an
+# application are lost when that process crashes, and crash logs are the
+# highest-value logs. The container runtime has already written the line to
+# disk before anything can die. See
+# platform-demo-gitops/docs/observability/README.md, decision 1.
 mode: daemonset
 
 resources:
@@ -7,20 +17,70 @@ presets:
   logsCollection:
     enabled: true
     includeCollectorLogs: false
+  kubernetesAttributes:
+    enabled: true
 
 config:
+  receivers:
+    filelog:
+      operators:
+        # Strips the CRI/containerd wrapper and promotes the real log line
+        # into `body`, so the JSON parser below sees application output
+        # rather than runtime framing.
+        - type: container
+          id: container-parser
+
+        # Applications emit structured JSON (see the service templates). The
+        # guard means a plain-text line — a panic, a JVM stack trace, an
+        # early startup message before the logger is configured — passes
+        # through as an unparsed body instead of being dropped. Never
+        # silently discard a log record.
+        - type: json_parser
+          id: app-json
+          if: 'body matches "^\\s*\\{.*\\}\\s*$"'
+          parse_from: body
+          parse_to: attributes
+          severity:
+            parse_from: attributes.severity
+          # This is the correlation requirement: promote the IDs the
+          # application injected into first-class log-record fields, so
+          # Grafana can pivot from a log line to its trace.
+          trace:
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+
   processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
     batch: {}
-    k8sattributes: {}
 
   exporters:
-    elasticsearch:
-      endpoints: ["http://elasticsearch-master.logging.svc.cluster.local:9200"]
-      logs_index: logs
+    otlp/gateway:
+      endpoint: otel-collector-gateway.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
+      # Absorbs a gateway restart or rollout without losing records. This
+      # queue is also what the Kafka decision is measured against — see
+      # decision 3 in the observability README.
+      sending_queue:
+        enabled: true
+        queue_size: 1000
+      retry_on_failure:
+        enabled: true
+        initial_interval: 5s
+        max_interval: 30s
 
   service:
     pipelines:
       logs:
         receivers: [filelog]
-        processors: [k8sattributes, batch]
-        exporters: [elasticsearch]
+        processors: [memory_limiter, k8sattributes, batch]
+        exporters: [otlp/gateway]
+
+# Timestamp parsing is deliberately not configured: the collector's observed
+# time is within milliseconds of the emit time at this scale, and a wrong
+# strptime layout silently shifts every record. Revisit if log ordering
+# across services ever becomes a real debugging problem.

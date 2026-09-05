@@ -1,0 +1,19 @@
+# Cluster-internal only. Backstage's backend reaches this over the mesh; there
+# is no Istio Gateway or VirtualService for it, because nothing outside the
+# cluster has any business asking an agent to open pull requests.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-platform-agent
+  labels:
+    app.kubernetes.io/name: ai-platform-agent
+    team: platform-team
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ai-platform-agent
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
