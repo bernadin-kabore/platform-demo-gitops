@@ -22,7 +22,13 @@ spec:
       source:
         repoURL: https://github.com/bernadin-kabore/platform-demo-gitops.git
         targetRevision: main
-        path: "{{.path}}"
+        # .path.path, not .path. A git *file* generator sets `path` to a
+        # structured object — {path, basename, filename, segments} — which
+        # silently overrides any "path" key inside config.json itself.
+        # Referencing the bare object stringifies the whole map into
+        # spec.source.path, and every Application reports "app path does not
+        # exist" with a Go map literal in the message.
+        path: "{{.path.path}}"
       destination:
         server: https://kubernetes.default.svc
         namespace: "{{.namespace}}"

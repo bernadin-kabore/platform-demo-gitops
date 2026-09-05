@@ -1,1 +1,1 @@
-{ "component": "tempo", "namespace": "observability", "path": "apps/observability/tempo" }
+{ "component": "tempo", "namespace": "observability" }

@@ -1,1 +1,1 @@
-{ "component": "crossplane", "namespace": "crossplane-system", "path": "apps/crossplane" }
+{ "component": "crossplane", "namespace": "crossplane-system" }

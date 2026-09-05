@@ -1,1 +1,1 @@
-{ "component": "kube-prometheus-stack", "namespace": "monitoring", "path": "apps/observability/kube-prometheus-stack" }
+{ "component": "kube-prometheus-stack", "namespace": "monitoring" }

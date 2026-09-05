@@ -1,1 +1,1 @@
-{ "component": "argo-rollouts", "namespace": "argo-rollouts", "path": "apps/argo-rollouts" }
+{ "component": "argo-rollouts", "namespace": "argo-rollouts" }

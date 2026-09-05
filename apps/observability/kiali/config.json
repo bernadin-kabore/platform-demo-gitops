@@ -1,1 +1,1 @@
-{ "component": "kiali", "namespace": "istio-system", "path": "apps/observability/kiali" }
+{ "component": "kiali", "namespace": "istio-system" }
