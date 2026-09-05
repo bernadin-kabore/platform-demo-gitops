@@ -396,21 +396,74 @@ kubectl get resourcequota,limitrange,networkpolicy -A
 
 ## 11. Teardown
 
-Argo CD resources with finalizers can hold AWS-backed Kubernetes resources in
-place. Delete application workloads and platform applications cleanly before
-destroying the cluster, and confirm that load balancers and persistent volumes
-have been removed.
+**`terraform destroy` on its own is not enough, and the ways it falls short
+cost money quietly.** Three kinds of AWS resource exist because the *cluster*
+created them, not because Terraform did, so they are absent from state:
 
-Then preview Terraform destruction:
+| Resource | Created by | What happens if you skip it |
+|---|---|---|
+| Load balancers | a `Service` of type `LoadBalancer` | The ELB keeps ENIs in the subnets, and the VPC delete fails after Terraform has already removed everything else |
+| Karpenter nodes | Karpenter, in response to Pending pods | Instances keep running and billing after the cluster is gone, with nothing left pointing at them |
+| EBS volumes | dynamically provisioned `PersistentVolumeClaim`s | Volumes are orphaned and bill indefinitely |
 
-```powershell
-Set-Location "$workspace\platform-demo-terraform-modules\envs\dev"
-terraform plan -destroy
+Karpenter also *replaces* nodes you terminate, so stop it before removing
+anything, or you will terminate the same capacity repeatedly:
+
+```bash
+workspace="/d/Bernadin/PROJECTS_PORFOLIO/Platform_Engineering"
+
+# 1. Stop Argo CD recreating what you are about to delete.
+for a in $(kubectl get applications -n argocd -o name); do
+  kubectl patch "$a" -n argocd --type merge \
+    -p '{"spec":{"syncPolicy":{"automated":null}}}'
+done
+
+# 2. Stop Karpenter provisioning replacements.
+kubectl scale deploy karpenter -n kube-system --replicas=0
+
+# 3. Remove the load balancers, then wait for the ELBs to actually disappear.
+kubectl get svc -A -o json \
+  | jq -r '.items[] | select(.spec.type=="LoadBalancer")
+           | "\(.metadata.namespace) \(.metadata.name)"' \
+  | while read ns name; do kubectl delete svc -n "$ns" "$name"; done
+
+# 4. Release the EBS volumes.
+kubectl delete pvc --all -A --timeout=120s
+
+# 5. Terminate anything Karpenter launched.
+ids=$(aws ec2 describe-instances \
+  --filters "Name=tag:karpenter.sh/nodepool,Values=default" \
+            "Name=instance-state-name,Values=running,pending" \
+  --query 'Reservations[].Instances[].InstanceId' --output text)
+[ -n "$ids" ] && aws ec2 terminate-instances --instance-ids $ids
 ```
 
-Run `terraform destroy` only when you intend to delete the demo AWS
-environment. The remote-state S3 bucket is protected and is managed separately
-by the bootstrap module.
+Only then:
+
+```bash
+cd "$workspace/platform-demo-terraform-modules/envs/dev"
+terraform plan -destroy      # read it
+terraform destroy
+```
+
+Afterwards, confirm nothing survived — a step worth doing every time, because
+each of these bills whether or not you remember it:
+
+```bash
+aws ec2 describe-instances \
+  --filters "Name=instance-state-name,Values=running" \
+  --query 'Reservations[].Instances[].InstanceId' --output text
+aws ec2 describe-volumes --filters "Name=status,Values=available" \
+  --query 'Volumes[].VolumeId' --output text
+aws elbv2 describe-load-balancers --query 'LoadBalancers[].LoadBalancerName' \
+  --output text
+```
+
+The remote-state S3 bucket and lock table are managed separately by the
+bootstrap module and are deliberately not destroyed here. Note also that
+`terraform destroy` removes the account-global EC2 Spot service-linked role if
+this configuration created it; set `create_spot_service_linked_role = false`
+in any account where something else depends on it.
 
 ## Current automation gaps
 
