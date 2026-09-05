@@ -38,9 +38,13 @@ spec:
       verifyImages:
         - imageReferences:
             - "*.dkr.ecr.*.amazonaws.com/*"
-          # matches the predicate type cosign embeds for `--type spdxjson`
-          # (see platform-demo-hello-world-template's ci.yml "Attest SBOM" step)
-          type: https://spdx.dev/Document
+          # `type` here is the SIGNATURE format, and Kyverno accepts only
+          # "Cosign" or "Notary" — it is not the predicate type. The predicate
+          # cosign embeds for `--type spdxjson` is matched by
+          # attestations[].predicateType below, which already carries it (see
+          # platform-demo-hello-world-template's service-build.yml "Attest SBOM"
+          # step). Putting the predicate URI here is rejected by the CRD.
+          type: Cosign
           attestors:
             - count: 1
               entries:
