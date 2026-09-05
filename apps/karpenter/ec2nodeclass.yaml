@@ -28,8 +28,18 @@ spec:
     - tags:
         karpenter.sh/discovery: platform-demo
   securityGroupSelectorTerms:
+    # The EKS-managed cluster security group, which is what permits
+    # node-to-control-plane traffic. Selecting on
+    # kubernetes.io/cluster/platform-demo matched Terraform's own
+    # control-plane security group instead: EKS tags its managed group
+    # "owned" and Terraform tags its group "shared", so a selector on the key
+    # alone picks whichever it finds. Nodes then launched into a group that
+    # could not reach the API server, ran healthily in EC2, and never
+    # registered — with no error anywhere, because nothing failed.
+    #
+    # aws:eks:cluster-name is set by EKS itself and names exactly one group.
     - tags:
-        kubernetes.io/cluster/platform-demo: shared
+        aws:eks:cluster-name: platform-demo
   tags:
     karpenter.sh/discovery: platform-demo
   blockDeviceMappings:
