@@ -38,6 +38,15 @@ spec:
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          # Kyverno's clusterpolicies and policies CRDs are larger than the
+          # 262144-byte ceiling on metadata.annotations, and a client-side
+          # apply stores the whole manifest in
+          # kubectl.kubernetes.io/last-applied-configuration. Both CRDs are
+          # rejected, every ClusterPolicy that depends on them then fails with
+          # "ensure CRDs are installed first", and the platform ends up
+          # enforcing no admission policy at all while the Application merely
+          # looks OutOfSync. Server-side apply does not write that annotation.
+          - ServerSideApply=true
         retry:
           limit: 5
           backoff:
