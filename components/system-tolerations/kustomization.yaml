@@ -7,6 +7,12 @@
 # pod and an Application stuck Progressing, which is how an afternoon
 # disappears.
 #
+# Jobs are included because Helm hook Jobs are the sharpest version of this
+# failure: Helm blocks on a pre-install hook before creating anything else,
+# so one unschedulable Job hangs an entire release with no other resources
+# and an error that never mentions the taint. Nine of them render across
+# kyverno, efk and kube-prometheus-stack, and none carried tolerations.
+#
 # DaemonSets are deliberately NOT patched. A JSON patch replaces the
 # tolerations list rather than appending to it, and node-level agents carry
 # their own: kube-prometheus-stack's node-exporter tolerates every NoSchedule
@@ -32,6 +38,16 @@ patches:
             effect: NoSchedule
   - target:
       kind: StatefulSet
+    patch: |
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: CriticalAddonsOnly
+            operator: Equal
+            value: "true"
+            effect: NoSchedule
+  - target:
+      kind: Job
     patch: |
       - op: add
         path: /spec/template/spec/tolerations
