@@ -1,1 +1,1 @@
-{ "component": "kyverno", "namespace": "kyverno", "path": "apps/kyverno" }
+{ "component": "kyverno", "namespace": "kyverno" }

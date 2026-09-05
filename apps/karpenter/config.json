@@ -1,1 +1,1 @@
-{ "component": "karpenter", "namespace": "kube-system", "path": "apps/karpenter" }
+{ "component": "karpenter", "namespace": "kube-system" }
