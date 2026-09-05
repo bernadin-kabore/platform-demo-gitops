@@ -47,3 +47,14 @@ notifications:
 
 redis:
   tolerations: *systemTolerations
+
+# Every component, including pre-install hooks like redis-secret-init, has to
+# tolerate the system node group's taint. Enumerating them per component missed
+# the hook Jobs and dex, and the failure mode is a hung `helm install` with one
+# Pending pod and no other resources created.
+global:
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Equal
+      value: "true"
+      effect: NoSchedule
