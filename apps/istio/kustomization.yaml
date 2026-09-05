@@ -4,7 +4,7 @@ kind: Kustomization
 helmCharts:
   - name: base
     repo: https://istio-release.storage.googleapis.com/charts
-    version: 1.22.1
+    version: 1.30.4
     releaseName: istio-base
     namespace: istio-system
     valuesFile: values-base.yaml
@@ -12,14 +12,14 @@ helmCharts:
 
   - name: istiod
     repo: https://istio-release.storage.googleapis.com/charts
-    version: 1.22.1
+    version: 1.30.4
     releaseName: istiod
     namespace: istio-system
     valuesFile: values-istiod.yaml
 
   - name: gateway
     repo: https://istio-release.storage.googleapis.com/charts
-    version: 1.22.1
+    version: 1.30.4
     releaseName: istio-ingressgateway
     namespace: istio-system
     valuesFile: values-gateway.yaml

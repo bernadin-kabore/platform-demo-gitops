@@ -9,3 +9,6 @@ helmCharts:
     namespace: observability
     valuesFile: values.yaml
     includeCRDs: true
+
+components:
+  - ../../../components/system-tolerations

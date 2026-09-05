@@ -8,6 +8,12 @@
 # highest-value logs. The container runtime has already written the line to
 # disk before anything can die. See
 # platform-demo-gitops/docs/observability/README.md, decision 1.
+# k8s, not contrib: this collector only needs filelog, k8sattributes and
+# the OTLP exporter, all of which the k8s distribution ships. It runs on
+# every node, so the smaller image is worth the explicitness.
+image:
+  repository: otel/opentelemetry-collector-k8s
+
 mode: daemonset
 
 resources:
@@ -84,3 +90,13 @@ config:
 # time is within milliseconds of the emit time at this scale, and a wrong
 # strptime layout silently shifts every record. Revisit if log ordering
 # across services ever becomes a real debugging problem.
+
+# This DaemonSet must run on the system nodes too, or their container logs are
+# never collected. DaemonSets are excluded from the shared tolerations
+# component (it would clobber node-exporter's tolerate-everything list), so
+# this one sets its own.
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Equal
+    value: "true"
+    effect: NoSchedule

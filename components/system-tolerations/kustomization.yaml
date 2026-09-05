@@ -1,0 +1,42 @@
+# Adds the system node group's toleration to every Deployment and StatefulSet
+# a platform component renders, whatever its upstream chart calls the key.
+#
+# Why patch by kind instead of through each chart's values: these charts name
+# that key six different ways, and a chart that does not expose it at all
+# leaves no option. A missed one does not fail loudly — it produces a Pending
+# pod and an Application stuck Progressing, which is how an afternoon
+# disappears.
+#
+# DaemonSets are deliberately NOT patched. A JSON patch replaces the
+# tolerations list rather than appending to it, and node-level agents carry
+# their own: kube-prometheus-stack's node-exporter tolerates every NoSchedule
+# taint already, and overwriting that would stop node metrics being collected
+# from exactly the nodes this taint protects. DaemonSets that genuinely need
+# the toleration get it through their chart values instead.
+#
+# Not referenced by apps/karpenter (its chart already sets the toleration) or
+# apps/istio (istiod carries a cni.istio.io/not-ready toleration this patch
+# would clobber) — both handle it through values.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: CriticalAddonsOnly
+            operator: Equal
+            value: "true"
+            effect: NoSchedule
+  - target:
+      kind: StatefulSet
+    patch: |
+      - op: add
+        path: /spec/template/spec/tolerations
+        value:
+          - key: CriticalAddonsOnly
+            operator: Equal
+            value: "true"
+            effect: NoSchedule

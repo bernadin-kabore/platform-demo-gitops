@@ -21,3 +21,16 @@ spec:
   serviceAccountTemplate:
     metadata:
       name: provider-aws
+  # The provider's pod is created by Crossplane from this runtime config, not
+  # by a Deployment in this repository — so the shared tolerations component
+  # never sees it and it would sit Pending on the tainted system nodes.
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          tolerations:
+            - key: CriticalAddonsOnly
+              operator: Equal
+              value: "true"
+              effect: NoSchedule

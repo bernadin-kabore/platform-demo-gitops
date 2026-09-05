@@ -20,3 +20,6 @@ resources:
   - policies/disallow-default-namespace.yaml
   - policies/restrict-image-registries.yaml
   - policies/require-labels.yaml
+
+components:
+  - ../../components/system-tolerations

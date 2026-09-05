@@ -22,3 +22,6 @@ helmCharts:
     namespace: observability
     valuesFile: values-agent.yaml
     includeCRDs: true
+
+components:
+  - ../../../components/system-tolerations
