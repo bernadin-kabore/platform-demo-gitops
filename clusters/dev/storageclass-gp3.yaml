@@ -1,0 +1,28 @@
+# The cluster ships with only the in-tree `gp2` class, whose provisioner
+# (kubernetes.io/aws-ebs) was removed in Kubernetes 1.28 and does not exist on
+# this 1.33 cluster — and nothing is marked default. So every PersistentVolume
+# claim stays Pending with "unbound immediate PersistentVolumeClaims", which
+# takes down Tempo, Prometheus, Alertmanager and Elasticsearch, and then
+# OpenCost as a second-order effect because it cannot reach a Prometheus that
+# never started.
+#
+# This lives in clusters/dev rather than under apps/ on purpose: the root
+# Application syncs this directory directly, so the class exists before the
+# ApplicationSet creates anything that claims storage. As an apps/ component it
+# would race the workloads that depend on it.
+#
+# gp3 rather than gp2: cheaper per GB, and baseline throughput is not tied to
+# volume size.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Delete

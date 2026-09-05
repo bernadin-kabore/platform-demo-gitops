@@ -75,8 +75,11 @@ config:
       # traces and logs.
       resource_to_telemetry_conversion:
         enabled: true
-      sending_queue:
-        enabled: true
+      # No sending_queue here. The prometheusremotewrite exporter does not
+      # accept one in this collector version and refuses to start at all —
+      # "'' has invalid keys: sending_queue" — rather than ignoring it. The
+      # otlp/tempo exporter above does accept it, which is what makes the
+      # asymmetry look like a mistake.
       retry_on_failure:
         enabled: true
 
