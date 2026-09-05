@@ -7,6 +7,12 @@
 # pod and an Application stuck Progressing, which is how an afternoon
 # disappears.
 #
+# CronJobs need a different path — /spec/jobTemplate/spec/template/spec —
+# because the pod template is nested one level deeper. Patching `Job` does
+# not reach the Jobs a CronJob creates: those are built from the CronJob's
+# jobTemplate at trigger time and never exist as Job manifests here. The
+# five kyverno cleanup CronJobs are the ones this catches.
+#
 # Jobs are included because Helm hook Jobs are the sharpest version of this
 # failure: Helm blocks on a pre-install hook before creating anything else,
 # so one unschedulable Job hangs an entire release with no other resources
@@ -51,6 +57,16 @@ patches:
     patch: |
       - op: add
         path: /spec/template/spec/tolerations
+        value:
+          - key: CriticalAddonsOnly
+            operator: Equal
+            value: "true"
+            effect: NoSchedule
+  - target:
+      kind: CronJob
+    patch: |
+      - op: add
+        path: /spec/jobTemplate/spec/template/spec/tolerations
         value:
           - key: CriticalAddonsOnly
             operator: Equal

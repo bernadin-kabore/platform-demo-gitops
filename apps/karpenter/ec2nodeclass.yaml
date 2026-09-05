@@ -3,6 +3,17 @@ kind: EC2NodeClass
 metadata:
   name: default
 spec:
+  # Required as of Karpenter v1. Under v1beta1 amiFamily alone was enough to
+  # select an AMI; v1 made the selection explicit and rejects the object
+  # without it — "spec.amiSelectorTerms: Required value". The NodePool then
+  # never goes Ready, Karpenter logs "no nodepools found", and nothing scales,
+  # which surfaces as unrelated pods stuck Pending on "Too many pods".
+  #
+  # `alias` tracks the EKS-optimised AL2023 AMI for the cluster's Kubernetes
+  # version, so a control-plane upgrade does not silently keep provisioning
+  # nodes built for the old one.
+  amiSelectorTerms:
+    - alias: al2023@latest
   amiFamily: AL2023
   role: "platform-demo-karpenter-node" # module.karpenter_iam.node_role_arn's role name
   subnetSelectorTerms:
