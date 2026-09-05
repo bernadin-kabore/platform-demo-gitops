@@ -24,9 +24,13 @@ traces:
 # denied". fsGroup makes the kubelet chown the volume to the group the
 # container runs as. Required here and not for the other stateful components
 # because they set their own; this chart does not.
-tempo:
-  securityContext:
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
-    runAsNonRoot: true
+# Root-level, not under `tempo:`. The chart's tempo.securityContext is the
+# container context; this one is the pod's, and fsGroup is only meaningful
+# there. Setting it in the wrong place is silently accepted and renders an
+# empty securityContext, which is how this looked fixed while Tempo kept
+# failing on "mkdir /var/tempo/traces: permission denied".
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  runAsNonRoot: true

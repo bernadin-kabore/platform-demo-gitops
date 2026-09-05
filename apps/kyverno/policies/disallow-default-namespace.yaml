@@ -6,6 +6,19 @@ metadata:
     policies.kyverno.io/title: Disallow Default Namespace
     policies.kyverno.io/category: Best Practices
     policies.kyverno.io/severity: low
+    # Do not autogenerate controller rules for this policy.
+    #
+    # Kyverno normally rewrites a Pod rule onto Deployments, Jobs, CronJobs and
+    # friends, applying the same pattern to spec.template. That is right for a
+    # rule about containers and wrong for this one: a pod template has no
+    # metadata.namespace, so the generated rule fails on every workload with
+    # "validation error ... at path /spec/template/metadata/namespace/".
+    #
+    # It blocked the platform from installing itself — kube-prometheus-stack's
+    # admission Job was denied, its sync aborted, and its CRDs never landed. A
+    # Pod-scoped rule loses nothing here: controllers create Pods, and those
+    # Pods are admitted through this rule anyway.
+    pod-policies.kyverno.io/autogen-controllers: none
 spec:
   validationFailureAction: Enforce
   background: true
