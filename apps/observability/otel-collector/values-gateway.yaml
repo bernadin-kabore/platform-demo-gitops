@@ -90,14 +90,15 @@ config:
     elasticsearch/logs:
       endpoints: ["http://elasticsearch-master.logging.svc.cluster.local:9200"]
       logs_index: logs
+      # Queue only, with no tuning keys. The elasticsearch exporter accepts
+      # sending_queue but not max_requests inside it, and rejects
+      # retry_on_failure entirely — it manages its own retries. Compare
+      # prometheusremotewrite, which rejects sending_queue outright, and
+      # otlp/tempo, which takes the full exporterhelper set. The three
+      # exporters in this file accept three different subsets, so settings
+      # cannot be copied between them.
       sending_queue:
         enabled: true
-      # No retry_on_failure here either. The elasticsearch exporter manages its
-      # own retries and rejects the standard exporterhelper key outright, the
-      # same way prometheusremotewrite rejects sending_queue. Only otlp/tempo
-      # accepts the full exporterhelper set, which is what makes copying
-      # settings between exporters in this file unsafe.
-        max_requests: 5
 
   service:
     pipelines:
