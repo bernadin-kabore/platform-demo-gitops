@@ -22,6 +22,11 @@ spec:
     - { group: networking.istio.io, kind: VirtualService }
     - { group: networking.istio.io, kind: DestinationRule }
     - { group: monitoring.coreos.com, kind: ServiceMonitor }
+    # A service may ship alerting rules that only concern itself, declared as
+    # values in its own deployment state — see the application chart's
+    # templates/prometheusrule.yaml. Rules that apply to every service are a
+    # platform change and live in this repository instead.
+    - { group: monitoring.coreos.com, kind: PrometheusRule }
     - { group: platform.acme.io, kind: S3Bucket }
   orphanedResources:
     warn: true
