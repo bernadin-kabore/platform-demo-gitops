@@ -92,8 +92,11 @@ config:
       logs_index: logs
       sending_queue:
         enabled: true
-      retry_on_failure:
-        enabled: true
+      # No retry_on_failure here either. The elasticsearch exporter manages its
+      # own retries and rejects the standard exporterhelper key outright, the
+      # same way prometheusremotewrite rejects sending_queue. Only otlp/tempo
+      # accepts the full exporterhelper set, which is what makes copying
+      # settings between exporters in this file unsafe.
         max_requests: 5
 
   service:
