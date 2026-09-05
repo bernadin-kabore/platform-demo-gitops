@@ -12,3 +12,6 @@ helmCharts:
 
 resources:
   - analysistemplate-success-rate.yaml
+
+components:
+  - ../../components/system-tolerations

@@ -19,3 +19,7 @@ platform-demo-backstage/packages/*/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Charts pulled by `kustomize build --enable-helm` during local rendering.
+# ArgoCD fetches its own copies server-side; these are a local cache only.
+charts/

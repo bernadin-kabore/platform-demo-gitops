@@ -3,6 +3,13 @@
 # DaemonSet (logs), then fans out to Tempo, Prometheus and Elasticsearch.
 # Applications never name a backend — that is the whole point of the
 # OpenTelemetry contract.
+# contrib, not k8s: the logs pipeline below uses the `elasticsearch`
+# exporter, which only the contrib distribution ships. The chart requires
+# this to be set explicitly rather than defaulting, so that the choice of
+# distribution is visible at the point it constrains the config.
+image:
+  repository: otel/opentelemetry-collector-contrib
+
 mode: deployment
 replicaCount: 2
 

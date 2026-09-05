@@ -17,3 +17,6 @@ resources:
   - provider-config.yaml
   - compositions/xrd-s3bucket.yaml
   - compositions/composition-s3bucket-aws.yaml
+
+components:
+  - ../../components/system-tolerations

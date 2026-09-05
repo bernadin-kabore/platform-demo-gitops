@@ -1,5 +1,15 @@
 prometheus:
   prometheusSpec:
+    # Prometheus and Alertmanager are not Deployments — the operator builds
+    # their StatefulSets from these CRs, so the shared tolerations component
+    # (which patches rendered Deployments and StatefulSets) never sees them.
+    # Without this they are the only two workloads left Pending, and the
+    # symptom is an Application that reports Healthy while nothing scrapes.
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
     retention: 7d
     resources:
       requests: { cpu: 200m, memory: 512Mi }
@@ -18,6 +28,16 @@ prometheus:
 alertmanager:
   enabled: true
   alertmanagerSpec:
+    # Prometheus and Alertmanager are not Deployments — the operator builds
+    # their StatefulSets from these CRs, so the shared tolerations component
+    # (which patches rendered Deployments and StatefulSets) never sees them.
+    # Without this they are the only two workloads left Pending, and the
+    # symptom is an Application that reports Healthy while nothing scrapes.
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
     resources:
       requests: { cpu: 50m, memory: 64Mi }
 

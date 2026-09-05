@@ -25,3 +25,12 @@ meshConfig:
 
 telemetry:
   enabled: true
+
+# Set here rather than through the shared kustomize component: that patch
+# replaces the tolerations list, and istiod already carries
+# cni.istio.io/not-ready. Helm merges; the patch would not.
+tolerations:
+  - key: CriticalAddonsOnly
+    operator: Equal
+    value: "true"
+    effect: NoSchedule

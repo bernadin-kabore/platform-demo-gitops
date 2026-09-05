@@ -14,3 +14,6 @@ resources:
   - dashboards/grafana-dashboard-istio.yaml
   - dashboards/grafana-dashboard-karpenter.yaml
   - servicemonitor-otel-collector.yaml
+
+components:
+  - ../../../components/system-tolerations

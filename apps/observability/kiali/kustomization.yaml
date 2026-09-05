@@ -9,3 +9,6 @@ helmCharts:
     namespace: istio-system
     valuesFile: values.yaml
     includeCRDs: true
+
+components:
+  - ../../../components/system-tolerations

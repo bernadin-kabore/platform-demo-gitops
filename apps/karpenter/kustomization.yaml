@@ -8,7 +8,11 @@ kind: Kustomization
 # and keep only ec2nodeclass.yaml/nodepool-default.yaml here.
 helmCharts:
   - name: karpenter
-    repo: oci://public.ecr.aws/karpenter/karpenter
+    # Parent path only. Kustomize appends `name` to `repo` to build the
+    # OCI reference, so including the chart name here yields
+    # public.ecr.aws/karpenter/karpenter/karpenter and a 404. Helm's own
+    # CLI convention does include it, which is what makes this look right.
+    repo: oci://public.ecr.aws/karpenter
     version: 1.0.2
     releaseName: karpenter
     namespace: kube-system

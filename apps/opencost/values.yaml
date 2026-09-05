@@ -1,3 +1,8 @@
+# OpenCost 2.x. The 1.x line was pruned from the chart repository, and the
+# jump is a restructure rather than a bump: serviceAccount moved to the root,
+# and the UI moved under opencost.ui. A stale key here does not fail the
+# render — it is silently ignored — so the role annotation is verified in the
+# rendered ServiceAccount rather than assumed.
 opencost:
   exporter:
     defaultClusterId: platform-demo
@@ -5,15 +10,22 @@ opencost:
     # shipped by kube-prometheus-stack) to compute per-pod/namespace/team
     # cost using live AWS pricing, attributed via the "team" label the
     # require-labels Kyverno policy enforces on every pod.
-    extraEnv:
-      CLOUD_PROVIDER_API_KEY: ""
-    serviceAccount:
-      annotations:
-        eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-opencost"
+
   prometheus:
     external:
       enabled: true
       url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+    # 2.x defaults internal to true, so leaving it unset would point OpenCost
+    # at an in-cluster Prometheus that does not exist alongside the external
+    # one it is told to use.
+    internal:
+      enabled: false
 
-ui:
-  enabled: true
+  ui:
+    enabled: true
+
+# Root-level in 2.x; it was opencost.exporter.serviceAccount in 1.x. This
+# grants OpenCost the AWS pricing API access Terraform's IRSA role provides.
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-opencost"

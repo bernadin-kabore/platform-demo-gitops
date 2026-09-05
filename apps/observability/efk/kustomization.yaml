@@ -20,3 +20,6 @@ helmCharts:
 
 resources:
   - index-lifecycle-policy.yaml
+
+components:
+  - ../../../components/system-tolerations
