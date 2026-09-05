@@ -17,11 +17,6 @@ configs:
       g, platform-admins, role:platform-admin
 
 server:
-  tolerations: &systemTolerations
-    - key: CriticalAddonsOnly
-      operator: Equal
-      value: "true"
-      effect: NoSchedule
   autoscaling:
     enabled: false
   ingress:
