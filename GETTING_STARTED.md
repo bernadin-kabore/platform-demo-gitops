@@ -421,16 +421,27 @@ done
 # 2. Stop Karpenter provisioning replacements.
 kubectl scale deploy karpenter -n kube-system --replicas=0
 
-# 3. Remove the load balancers, then wait for the ELBs to actually disappear.
+# 3. Remove Kyverno's webhooks, or the teardown deadlocks.
+#
+# The webhooks are registered failurePolicy: Fail, deliberately — an
+# unreachable webhook blocks the request rather than silently admitting it,
+# which is what makes the policy layer real. The consequence at teardown is
+# that once Kyverno's pods are gone, EVERY API call is denied, including the
+# deletes Terraform is trying to make. It shows up as EKS add-ons stuck in
+# DELETE_FAILED with "no endpoints available for service kyverno-svc", and
+# Terraform then cannot remove the cluster.
+kubectl get validatingwebhookconfigurations,mutatingwebhookconfigurations   --no-headers | grep -i kyverno | awk '{print $1}'   | xargs -r kubectl delete
+
+# 4. Remove the load balancers, then wait for the ELBs to actually disappear.
 kubectl get svc -A -o json \
   | jq -r '.items[] | select(.spec.type=="LoadBalancer")
            | "\(.metadata.namespace) \(.metadata.name)"' \
   | while read ns name; do kubectl delete svc -n "$ns" "$name"; done
 
-# 4. Release the EBS volumes.
+# 5. Release the EBS volumes.
 kubectl delete pvc --all -A --timeout=120s
 
-# 5. Terminate anything Karpenter launched.
+# 6. Terminate anything Karpenter launched.
 ids=$(aws ec2 describe-instances \
   --filters "Name=tag:karpenter.sh/nodepool,Values=default" \
             "Name=instance-state-name,Values=running,pending" \
