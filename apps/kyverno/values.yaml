@@ -20,47 +20,79 @@ config:
 metricsService:
   create: true # scraped by Prometheus — policy pass/fail rate becomes a dashboard
 
-# The chart defaults every cleanup job to docker.io/bitnami/kubectl:1.28.5,
-# which Bitnami removed from Docker Hub when it pruned its free catalog — the
-# pull now 404s and every cleanup CronJob lands in ImagePullBackOff. Swapping
-# to bitnamilegacy/ would work today and rot the same way, so these point at
-# the Kubernetes project's own kubectl image, pinned to the cluster's minor
-# version.
+# Every cleanup job defaults to docker.io/bitnami/kubectl:1.28.5, which Bitnami
+# removed when it pruned its free Docker Hub catalog — the pull 404s and each
+# cleanup CronJob lands in ImagePullBackOff. Pointing at bitnamilegacy/ would
+# work today and rot the same way, so these use the Kubernetes project's own
+# kubectl image, pinned to the cluster's minor version.
+#
+# The podSecurityContext comes with it: registry.k8s.io/kubectl runs as root,
+# and these pods are created with runAsNonRoot, so without an explicit uid the
+# kubelet refuses them with CreateContainerConfigError. Bitnami's image ran as
+# an unprivileged user, so replacing it meant supplying one.
 webhooksCleanup:
-    image:
-      registry: registry.k8s.io
-      repository: kubectl
-      tag: v1.33.4
+  image:
+    registry: registry.k8s.io
+    repository: kubectl
+    tag: v1.33.4
+  podSecurityContext:
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
 
 policyReportsCleanup:
-    image:
-      registry: registry.k8s.io
-      repository: kubectl
-      tag: v1.33.4
+  image:
+    registry: registry.k8s.io
+    repository: kubectl
+    tag: v1.33.4
+  podSecurityContext:
+    runAsUser: 65532
+    runAsGroup: 65532
+    fsGroup: 65532
 
 cleanupJobs:
   admissionReports:
-      image:
-        registry: registry.k8s.io
-        repository: kubectl
-        tag: v1.33.4
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
   clusterAdmissionReports:
-      image:
-        registry: registry.k8s.io
-        repository: kubectl
-        tag: v1.33.4
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
   ephemeralReports:
-      image:
-        registry: registry.k8s.io
-        repository: kubectl
-        tag: v1.33.4
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
   clusterEphemeralReports:
-      image:
-        registry: registry.k8s.io
-        repository: kubectl
-        tag: v1.33.4
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
   updateRequests:
-      image:
-        registry: registry.k8s.io
-        repository: kubectl
-        tag: v1.33.4
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
