@@ -18,3 +18,15 @@ traces:
       enabled: true
     http:
       enabled: true
+
+# Tempo runs as a non-root user and its PersistentVolume is mounted owned by
+# root, so it fails at startup with "mkdir /var/tempo/traces: permission
+# denied". fsGroup makes the kubelet chown the volume to the group the
+# container runs as. Required here and not for the other stateful components
+# because they set their own; this chart does not.
+tempo:
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    runAsNonRoot: true

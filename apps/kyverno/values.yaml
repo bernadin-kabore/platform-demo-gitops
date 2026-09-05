@@ -19,3 +19,48 @@ config:
 
 metricsService:
   create: true # scraped by Prometheus — policy pass/fail rate becomes a dashboard
+
+# The chart defaults every cleanup job to docker.io/bitnami/kubectl:1.28.5,
+# which Bitnami removed from Docker Hub when it pruned its free catalog — the
+# pull now 404s and every cleanup CronJob lands in ImagePullBackOff. Swapping
+# to bitnamilegacy/ would work today and rot the same way, so these point at
+# the Kubernetes project's own kubectl image, pinned to the cluster's minor
+# version.
+webhooksCleanup:
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+
+policyReportsCleanup:
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.33.4
+
+cleanupJobs:
+  admissionReports:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.33.4
+  clusterAdmissionReports:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.33.4
+  ephemeralReports:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.33.4
+  clusterEphemeralReports:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.33.4
+  updateRequests:
+      image:
+        registry: registry.k8s.io
+        repository: kubectl
+        tag: v1.33.4
