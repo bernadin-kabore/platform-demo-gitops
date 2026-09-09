@@ -1,4 +1,8 @@
-apiVersion: pkg.crossplane.io/v1
+# v1beta1, not v1: Functions are still beta in the Crossplane 1.16.0 chart
+# pinned in kustomization.yaml. `kubectl get crd functions.pkg.crossplane.io`
+# serves v1beta1 only, and v1 fails the sync with `no matches for kind
+# "Function"`. Revisit when that chart version moves.
+apiVersion: pkg.crossplane.io/v1beta1
 kind: Function
 metadata:
   name: function-patch-and-transform
