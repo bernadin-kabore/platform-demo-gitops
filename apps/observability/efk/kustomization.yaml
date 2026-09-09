@@ -56,3 +56,47 @@ patches:
       kind: Job
       metadata:
         name: pre-install-kibana-kibana
+
+  # Kibana's Deployment is rendered for a secured Elasticsearch even when it is
+  # pointed at an unsecured one. The chart always wires in a service-account
+  # token (from the Secret the pre-install hook above would have created) and a
+  # CA certificate, so with xpack.security.enabled: false the pod cannot start
+  # at all: CreateContainerConfigError, `secret "kibana-kibana-es-token" not
+  # found`. ELASTICSEARCH_HOSTS is already plain http://elasticsearch-master:9200,
+  # so neither the token nor the CA has anything to authenticate against.
+  #
+  # These four removals are the same decision as the hook removal, applied to
+  # the Deployment: this cluster runs Elasticsearch without security. The
+  # honest alternative is to turn security on in values-elasticsearch.yaml and
+  # let the chart's own wiring stand — at which point every patch in this file
+  # has to be reverted together, not one at a time.
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: kibana-kibana
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: kibana-kibana
+      spec:
+        template:
+          spec:
+            containers:
+              - name: kibana
+                env:
+                  - name: ELASTICSEARCH_SERVICEACCOUNTTOKEN
+                    $patch: delete
+                  - name: ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES
+                    $patch: delete
+                volumeMounts:
+                  - mountPath: /usr/share/kibana/config/certs
+                    $patch: delete
+                  - mountPath: /usr/share/kibana/config/tokens
+                    $patch: delete
+            volumes:
+              - name: elasticsearch-certs
+                $patch: delete
+              - name: kibana-tokens
+                $patch: delete
