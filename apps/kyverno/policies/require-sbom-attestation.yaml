@@ -56,7 +56,33 @@ spec:
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev
+                # The platform's own components are not scaffolded services and never run
+                # service-build.yml. platform-demo-ai-agent builds, signs and attests from
+                # its own ci.yml, so Fulcio records THAT file as the certificate subject and
+                # the entry above can never match it. Its namespace is not excluded from this
+                # policy either -- deliberately -- so without this entry the agent's own
+                # image is refused at admission.
+                #
+                # `count: 1` over several entries means ANY ONE of them must match. Naming a
+                # second exact workflow is therefore a widening of one known identity, not a
+                # loosening of the match: no wildcard, no extra repository, and removing the
+                # agent from the platform removes this entry with it.
+                - keyless:
+                    subject: "https://github.com/bernadin-kabore/platform-demo-ai-agent/.github/workflows/ci.yml@refs/heads/main"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
           attestations:
+          # Kyverno validates an attestation's attestors the same way it
+          # validates a signature's: each keyless entry needs either a Rekor URL
+          # or its own roots. Without it the CRD webhook rejects the whole
+          # policy with "Either Rekor URL or roots are required".
+          #
+          # The policy currently live in the cluster is missing this. It was
+          # admitted during the first sync, before Kyverno's own webhook was
+          # serving, and has been unappliable ever since -- which is why the
+          # kyverno Application sat OutOfSync with its ClusterPolicies never
+          # converging while the pods reported Healthy.
             - predicateType: https://spdx.dev/Document
               attestors:
                 - count: 1
@@ -64,3 +90,21 @@ spec:
                     - keyless:
                         subject: "https://github.com/bernadin-kabore/platform-demo-hello-world-template/.github/workflows/service-build.yml@refs/heads/main"
                         issuer: "https://token.actions.githubusercontent.com"
+                        rekor:
+                          url: https://rekor.sigstore.dev
+                    # The platform's own components are not scaffolded services and never run
+                    # service-build.yml. platform-demo-ai-agent builds, signs and attests from
+                    # its own ci.yml, so Fulcio records THAT file as the certificate subject and
+                    # the entry above can never match it. Its namespace is not excluded from this
+                    # policy either -- deliberately -- so without this entry the agent's own
+                    # image is refused at admission.
+                    #
+                    # `count: 1` over several entries means ANY ONE of them must match. Naming a
+                    # second exact workflow is therefore a widening of one known identity, not a
+                    # loosening of the match: no wildcard, no extra repository, and removing the
+                    # agent from the platform removes this entry with it.
+                    - keyless:
+                        subject: "https://github.com/bernadin-kabore/platform-demo-ai-agent/.github/workflows/ci.yml@refs/heads/main"
+                        issuer: "https://token.actions.githubusercontent.com"
+                        rekor:
+                          url: https://rekor.sigstore.dev
