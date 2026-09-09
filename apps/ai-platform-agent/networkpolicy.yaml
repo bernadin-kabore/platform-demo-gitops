@@ -38,6 +38,28 @@ spec:
           protocol: UDP
         - port: 53
           protocol: TCP
+    # istiod, for the sidecar's own control-plane traffic: XDS configuration and
+    # the CSR it signs to get a workload certificate. Without this the proxy
+    # never gets a certificate and the pod never becomes ready --
+    #
+    #   failed to sign CSR: ... dial tcp 172.20.167.171:15012: i/o timeout
+    #
+    # -- while the application container sits healthy behind it, which makes it
+    # look like the app is broken rather than the mesh.
+    #
+    # It needs its own rule rather than falling under the HTTPS-to-anywhere rule
+    # below for two independent reasons: port 15012 is not 443, and istiod's
+    # ClusterIP is inside 172.16.0.0/12, which that rule explicitly excludes.
+    # This policy predates the sidecar; joining the mesh is what made the
+    # control plane a destination this pod has to reach.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: istio-system
+      ports:
+        - port: 15012
+          protocol: TCP
+
     # Telemetry to the collector gateway.
     - to:
         - namespaceSelector:
