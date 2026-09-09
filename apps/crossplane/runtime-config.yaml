@@ -30,6 +30,15 @@ spec:
       selector: {}
       template:
         spec:
+          # A PodSpec requires `containers`, so this cannot be tolerations
+          # alone: the API rejects it with
+          # `spec.deploymentTemplate.spec.template.spec.containers: Required
+          # value`. Crossplane merges this template into the pod it builds by
+          # container name, so naming the runtime container and setting nothing
+          # else on it adds the tolerations without overriding the image,
+          # args or resources Crossplane chooses for the provider.
+          containers:
+            - name: package-runtime
           tolerations:
             - key: CriticalAddonsOnly
               operator: Equal
