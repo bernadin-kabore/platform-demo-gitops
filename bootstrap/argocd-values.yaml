@@ -78,6 +78,15 @@ configs:
       jqPathExpressions:
         - '.spec.admission'
         - '.spec.rules[]?.skipBackgroundRequests'
+        # The four below are defaulted only onto verifyImages rules, so they
+        # affect just require-signed-images and require-sbom-attestation.
+        # Their values are what the platform wants anyway -- digests verified
+        # and mutated, verification required -- which is precisely why they can
+        # be ignored rather than pinned: nothing here is choosing against them.
+        - '.spec.rules[]?.verifyImages[]?.mutateDigest'
+        - '.spec.rules[]?.verifyImages[]?.verifyDigest'
+        - '.spec.rules[]?.verifyImages[]?.required'
+        - '.spec.rules[]?.verifyImages[]?.useCache'
   rbac:
     policy.default: role:readonly
     policy.csv: |
