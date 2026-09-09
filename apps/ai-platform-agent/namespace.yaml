@@ -14,30 +14,26 @@ metadata:
   name: ai-platform
   labels:
     platform.acme.io/managed: "true"
-    istio-injection: enabled
-    # TEMPORARY: enforce is baseline, not restricted, and this is a known debt.
+    # Deliberately NOT istio-injection: enabled, and this is the trade that
+    # keeps restricted enforcement below.
     #
-    # Nothing about the agent needs the relaxation. Its own pod already meets
-    # restricted in full -- runAsNonRoot, runAsUser 65532, seccompProfile
-    # RuntimeDefault, capabilities drop ALL, allowPrivilegeEscalation false,
-    # readOnlyRootFilesystem -- and it was admitted on those terms. The single
-    # violating container is istio-init, which Istio injects to rewrite iptables
-    # and which needs NET_ADMIN, NET_RAW and runAsUser=0, all of which
-    # restricted forbids:
+    # Sidecar injection adds an istio-init container that rewrites iptables and
+    # needs NET_ADMIN, NET_RAW and runAsUser=0. Pod Security Admission rejects
+    # that at restricted AND at baseline -- baseline still forbids non-default
+    # capabilities -- so the only level that admits it is privileged, which is
+    # not a trade worth making for the component holding a GitHub App private
+    # key. The agent's own pod meets restricted in full on its own.
     #
-    #   violates PodSecurity "restricted:latest": unrestricted capabilities
-    #   (container "istio-init" must not include "NET_ADMIN", "NET_RAW")
+    # What this costs: the agent is outside the mesh. No mTLS on its traffic,
+    # no sidecar telemetry in Kiali, and peer-authentication-strict.yaml sets
+    # STRICT mesh-wide, so meshed callers cannot reach it. Nothing calls it
+    # from inside the mesh today; that changes the moment something does.
     #
-    # So this is not the agent failing the platform's rules; it is the sidecar
-    # injection model being incompatible with them. The real fix is the Istio
-    # CNI plugin, which moves that iptables work to a node-level DaemonSet and
-    # removes istio-init from workload pods entirely -- at which point this
-    # returns to restricted and the label below goes away.
-    #
-    # audit and warn deliberately stay at restricted. Violations are still
-    # recorded and surfaced, so relaxing enforcement does not also make the
-    # platform stop looking -- and when CNI lands, the audit stream is the
-    # evidence that flipping enforce back will not break anything else.
-    pod-security.kubernetes.io/enforce: baseline
+    # The fix that removes the trade is the Istio CNI plugin: iptables setup
+    # moves to a node-level DaemonSet, istio-init disappears from workload
+    # pods, and this namespace can carry injection and restricted at once.
+    # When that lands, add istio-injection: enabled back here and nothing else
+    # needs to change.
+    pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
