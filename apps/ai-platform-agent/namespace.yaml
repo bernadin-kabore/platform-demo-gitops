@@ -15,6 +15,29 @@ metadata:
   labels:
     platform.acme.io/managed: "true"
     istio-injection: enabled
-    pod-security.kubernetes.io/enforce: restricted
+    # TEMPORARY: enforce is baseline, not restricted, and this is a known debt.
+    #
+    # Nothing about the agent needs the relaxation. Its own pod already meets
+    # restricted in full -- runAsNonRoot, runAsUser 65532, seccompProfile
+    # RuntimeDefault, capabilities drop ALL, allowPrivilegeEscalation false,
+    # readOnlyRootFilesystem -- and it was admitted on those terms. The single
+    # violating container is istio-init, which Istio injects to rewrite iptables
+    # and which needs NET_ADMIN, NET_RAW and runAsUser=0, all of which
+    # restricted forbids:
+    #
+    #   violates PodSecurity "restricted:latest": unrestricted capabilities
+    #   (container "istio-init" must not include "NET_ADMIN", "NET_RAW")
+    #
+    # So this is not the agent failing the platform's rules; it is the sidecar
+    # injection model being incompatible with them. The real fix is the Istio
+    # CNI plugin, which moves that iptables work to a node-level DaemonSet and
+    # removes istio-init from workload pods entirely -- at which point this
+    # returns to restricted and the label below goes away.
+    #
+    # audit and warn deliberately stay at restricted. Violations are still
+    # recorded and surfaced, so relaxing enforcement does not also make the
+    # platform stop looking -- and when CNI lands, the audit stream is the
+    # evidence that flipping enforce back will not break anything else.
+    pod-security.kubernetes.io/enforce: baseline
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
