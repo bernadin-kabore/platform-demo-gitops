@@ -67,3 +67,19 @@ spec:
                     issuer: "https://token.actions.githubusercontent.com"
                     rekor:
                       url: https://rekor.sigstore.dev
+                # The platform's own components are not scaffolded services and never run
+                # service-build.yml. platform-demo-ai-agent builds, signs and attests from
+                # its own ci.yml, so Fulcio records THAT file as the certificate subject and
+                # the entry above can never match it. Its namespace is not excluded from this
+                # policy either -- deliberately -- so without this entry the agent's own
+                # image is refused at admission.
+                #
+                # `count: 1` over several entries means ANY ONE of them must match. Naming a
+                # second exact workflow is therefore a widening of one known identity, not a
+                # loosening of the match: no wildcard, no extra repository, and removing the
+                # agent from the platform removes this entry with it.
+                - keyless:
+                    subject: "https://github.com/bernadin-kabore/platform-demo-ai-agent/.github/workflows/ci.yml@refs/heads/main"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
