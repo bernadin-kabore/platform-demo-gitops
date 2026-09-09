@@ -11,11 +11,30 @@ global:
   # The system node group is tainted CriticalAddonsOnly=true:NoSchedule so only
   # platform components land on it and Karpenter provisions untainted nodes for
   # workloads. Every component here has to tolerate that taint.
+  #
+  # A toleration only PERMITS scheduling on the system nodes; it does not
+  # require it. Without the nodeSelector below the scheduler is free to place
+  # ArgoCD on a Karpenter node, and it did: argocd-server and
+  # argocd-application-controller both landed on a spot node that later went
+  # Ready=Unknown, which took the UI down and made a helm upgrade fail with
+  # `context deadline exceeded` while --wait blocked on two pods that could no
+  # longer be evicted.
+  #
+  # ArgoCD is what reconciles everything else, so it must not be disruptable by
+  # the autoscaler it manages. Pinning it to the managed node group — whose
+  # nodes are on-demand and owned by Terraform, not by Karpenter — is what makes
+  # its availability independent of the workload capacity it provisions.
   tolerations:
     - key: CriticalAddonsOnly
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 configs:
   params:
@@ -61,6 +80,12 @@ redisSecretInit:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 server:
   autoscaling:
@@ -74,6 +99,12 @@ server:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 controller:
   replicas: 1
@@ -82,6 +113,12 @@ controller:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 repoServer:
   replicas: 1
@@ -90,6 +127,12 @@ repoServer:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 applicationSet:
   enabled: true
@@ -98,6 +141,12 @@ applicationSet:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 notifications:
   enabled: true
@@ -106,6 +155,12 @@ notifications:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 dex:
   tolerations:
@@ -113,6 +168,12 @@ dex:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
 
 redis:
   tolerations:
@@ -120,3 +181,9 @@ redis:
       operator: Equal
       value: "true"
       effect: NoSchedule
+  nodeSelector:
+    # Both keys, because a component's nodeSelector REPLACES global.nodeSelector
+    # in this chart rather than merging with it — dropping the os key here would
+    # quietly widen scheduling instead of narrowing it.
+    kubernetes.io/os: linux
+    node.kubernetes.io/role: system
