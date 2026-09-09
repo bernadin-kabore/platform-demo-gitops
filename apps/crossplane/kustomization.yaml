@@ -1,3 +1,18 @@
+# The Helm chart installs Crossplane's CRDs; the manifests under `resources`
+# are custom resources of those CRDs. ArgoCD validates every resource in an
+# Application before it runs any sync wave, so on a cluster that has never had
+# Crossplane the whole sync is rejected before wave 0 can install the CRDs:
+#
+#   one or more synchronization tasks are not valid: failed to discover server
+#   resources for group version pkg.crossplane.io/v1 ...
+#
+# The waves below are correct and still necessary; they just never got to run.
+# Each of those custom resources therefore carries
+# argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true, which
+# tells ArgoCD to skip the dry-run for a kind whose CRD does not exist yet
+# rather than fail the whole sync. Do not remove it: it only has an effect on
+# a cluster where Crossplane is not installed, which is exactly the case that
+# was broken.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 

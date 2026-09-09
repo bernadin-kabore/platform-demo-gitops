@@ -1,3 +1,23 @@
+# Kibana's chart ships a `pre-install` hook Job (pre-install-kibana-kibana)
+# that ArgoCD runs as a PreSync hook, and it is removed below. Two independent
+# reasons, either of which is fatal:
+#
+# 1. It deadlocks. The Job mounts the Secret elasticsearch-master-certs, which
+#    Elasticsearch creates during the *main* sync — the sync the PreSync hook
+#    is blocking. The pod sits in ContainerCreating on FailedMount forever and
+#    the Application never leaves Missing.
+# 2. Even unblocked it cannot succeed. The Job's script calls Elasticsearch's
+#    _security service-token API over HTTPS, but values-elasticsearch.yaml sets
+#    xpack.security.enabled: false and values-kibana.yaml talks plain HTTP.
+#    There is no security API to call and no credential to call it with.
+#
+# So this is not an ordering problem to be fixed with sync waves — the hook is
+# meaningless for a security-disabled demo cluster. If security is ever turned
+# on for Elasticsearch, delete this patch first: the token bootstrap becomes
+# required, not merely harmless.
+#
+# Only the Job is removed. Its ServiceAccount, Role, RoleBinding and ConfigMap
+# still render; they are inert without it and removing them adds noise.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -23,3 +43,16 @@ resources:
 
 components:
   - ../../../components/system-tolerations
+
+patches:
+  - target:
+      group: batch
+      version: v1
+      kind: Job
+      name: pre-install-kibana-kibana
+    patch: |
+      $patch: delete
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: pre-install-kibana-kibana

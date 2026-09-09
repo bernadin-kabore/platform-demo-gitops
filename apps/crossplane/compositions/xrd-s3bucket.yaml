@@ -8,6 +8,7 @@ metadata:
   name: xs3buckets.platform.acme.io
   annotations:
     argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   group: platform.acme.io
   names:

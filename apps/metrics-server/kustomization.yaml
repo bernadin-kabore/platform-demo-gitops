@@ -1,0 +1,26 @@
+# The resource-metrics API (metrics.k8s.io), which EKS does not provide and
+# nothing else here installs.
+#
+# Without it every HorizontalPodAutoscaler reports
+# ScalingActive=False/FailedGetResourceMetric and shows `cpu: <unknown>`, and
+# ArgoCD's built-in HPA health check turns the owning Application Degraded —
+# which is what apps/istio was, on account of its ingress gateway's HPA, while
+# every one of its pods was running normally.
+#
+# Note that the cluster does have v1.metrics.eks.amazonaws.com. That is the EKS
+# extension API and is not what an HPA reads. kube-prometheus-stack does not
+# cover this either: Prometheus serves custom metrics, not metrics.k8s.io.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+helmCharts:
+  - name: metrics-server
+    repo: https://kubernetes-sigs.github.io/metrics-server/
+    version: 3.14.0
+    releaseName: metrics-server
+    namespace: kube-system
+    valuesFile: values.yaml
+    includeCRDs: true
+
+components:
+  - ../../components/system-tolerations

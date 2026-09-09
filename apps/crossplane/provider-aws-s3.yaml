@@ -4,6 +4,7 @@ metadata:
   name: provider-aws-s3
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   package: xpkg.upbound.io/upbound/provider-aws-s3:v1.19.0
   runtimeConfigRef:

@@ -24,6 +24,25 @@ configs:
     # Let ArgoCD render Helm charts that also embed raw Kustomize/manifests
     kustomize.buildOptions: "--enable-helm"
     timeout.reconciliation: 180s
+
+    # Admission webhook CA bundles are written by the controller that owns the
+    # webhook, not by the chart that declares it. istiod injects a caBundle
+    # into istio-validator-istio-system and istiod-default-validator; the Helm
+    # output has that field empty. With selfHeal on, ArgoCD blanks it, istiod
+    # writes it back, and the Application never reaches Synced — a manual sync
+    # reports "successfully synced (all tasks run)" and is OutOfSync again
+    # seconds later. Kyverno and cert-manager behave the same way.
+    #
+    # Ignoring the field platform-wide rather than per-Application is
+    # deliberate: it is a property of how admission webhooks work, not of any
+    # one component, and the ApplicationSet renders every app from one shared
+    # template with nowhere to put a per-app exception.
+    resource.customizations.ignoreDifferences.admissionregistration.k8s.io_ValidatingWebhookConfiguration: |
+      jqPathExpressions:
+        - '.webhooks[]?.clientConfig.caBundle'
+    resource.customizations.ignoreDifferences.admissionregistration.k8s.io_MutatingWebhookConfiguration: |
+      jqPathExpressions:
+        - '.webhooks[]?.clientConfig.caBundle'
   rbac:
     policy.default: role:readonly
     policy.csv: |
