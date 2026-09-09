@@ -24,8 +24,29 @@ spec:
               namespaces: [kube-system, karpenter]
       validate:
         message: "Every container must define livenessProbe and readinessProbe, so Argo Rollouts' health checks and the Istio gateway's routing are meaningful."
+        # periodSeconds, not "?*". Kyverno's "?*" means "one or more characters"
+        # -- a wildcard for a non-empty STRING -- and livenessProbe is an
+        # object, so the pattern could never match no matter how completely the
+        # probe was defined. The rule rejected every pod in a managed namespace
+        # while reporting that probes were missing from pods that had them:
+        #
+        #   rule require-liveness-readiness failed at path
+        #   /spec/containers/0/livenessProbe/
+        #
+        # ai-platform is currently the only namespace labelled
+        # platform.acme.io/managed, so this policy had never actually admitted
+        # anything before now, and the bug stayed invisible.
+        #
+        # Matching a scalar inside the object is the idiom that works: the API
+        # server defaults periodSeconds on any probe that exists, so requiring
+        # it to be greater than zero proves the probe is there. The same shape
+        # applies to both probes. Note that require-labels and
+        # require-resource-limits use "?*" correctly -- those target label
+        # values and resource quantities, which are strings.
         pattern:
           spec:
             containers:
-              - livenessProbe: "?*"
-                readinessProbe: "?*"
+              - livenessProbe:
+                  periodSeconds: ">0"
+                readinessProbe:
+                  periodSeconds: ">0"
