@@ -4,6 +4,34 @@ admissionController:
   replicas: 2
   resources:
     requests: { cpu: 100m, memory: 128Mi }
+  rbac:
+    serviceAccount:
+      annotations:
+        # Kyverno reads the registry it polices. verifyImages fetches the cosign
+        # signature stored beside the image as a sha256-<digest>.sig tag, and ECR
+        # is private, so that is an authenticated pull. Created by
+        # platform-demo-terraform-modules/envs/dev (module.irsa_kyverno); read
+        # only, and it cannot push, tag or delete.
+        eks.amazonaws.com/role-arn: "arn:aws:iam::382334305409:role/platform-demo-kyverno-admission"
+
+# The credential helpers Kyverno's registry client will try. The chart's default
+# is the full set; this narrows it to the two that can succeed here, so an ECR
+# pull fails fast on a real error instead of walking helpers for clouds this
+# cluster does not run in.
+#
+# `amazon` is the one that matters: without it Kyverno has no way to exchange
+# the IRSA credentials above for an ECR token, and image verification fails as
+#
+#   Get "https://<account>.dkr.ecr...": context canceled
+#
+# when the webhook's 30s budget expires -- which reads like an invalid
+# signature rather than a missing credential.
+features:
+  registryClient:
+    allowInsecure: false
+    credentialHelpers:
+      - default
+      - amazon
 
 backgroundController:
   enabled: true # continuously re-scans existing resources, not just new admissions
