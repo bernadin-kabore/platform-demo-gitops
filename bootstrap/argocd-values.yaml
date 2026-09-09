@@ -62,6 +62,22 @@ configs:
     resource.customizations.ignoreDifferences.admissionregistration.k8s.io_MutatingWebhookConfiguration: |
       jqPathExpressions:
         - '.webhooks[]?.clientConfig.caBundle'
+
+    # The same problem one layer up: Kyverno's CRD defaults spec.admission and
+    # spec.rules[].skipBackgroundRequests to true on admission, so every
+    # ClusterPolicy in this repository differs from its live copy the moment it
+    # is applied. All nine sat permanently OutOfSync while Kyverno itself
+    # reported Healthy and the policies were in fact enforcing -- a diff with
+    # no defect behind it, which is exactly the kind that trains people to
+    # ignore OutOfSync.
+    #
+    # Ignored rather than written into the manifests: these are API-server
+    # defaults, not platform intent, and copying them into git would encode
+    # today's Kyverno defaults as though they were decisions.
+    resource.customizations.ignoreDifferences.kyverno.io_ClusterPolicy: |
+      jqPathExpressions:
+        - '.spec.admission'
+        - '.spec.rules[]?.skipBackgroundRequests'
   rbac:
     policy.default: role:readonly
     policy.csv: |
