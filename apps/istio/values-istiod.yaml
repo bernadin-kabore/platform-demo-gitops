@@ -1,4 +1,17 @@
 pilot:
+  # The half of the CNI change that actually removes istio-init. This flag is
+  # what the sidecar injection template reads: with it false, istiod keeps
+  # injecting an init container that needs NET_ADMIN, NET_RAW and runAsUser=0,
+  # no matter how many CNI DaemonSets are running. With it true, injection
+  # produces only the sidecar and the redirect rules come from the node.
+  #
+  # It is set in the same commit as the cni chart deliberately. Enabling it
+  # without the DaemonSet leaves meshed pods with no redirect at all -- and
+  # unlike a missing sidecar, that fails silently: the pod runs, and its
+  # traffic simply is not in the mesh.
+  cni:
+    enabled: true
+    provider: default
   autoscaleEnabled: false
   resources:
     requests: { cpu: 100m, memory: 128Mi }

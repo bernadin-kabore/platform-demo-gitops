@@ -1,0 +1,74 @@
+# The Istio CNI plugin. It does NOT replace the AWS VPC CNI and does not
+# compete with it.
+#
+# The VPC CNI stays the primary plugin: it allocates the ENI and VPC IP, creates
+# the pod's interface and wires its routing. Istio's plugin chains onto that
+# (chained: true, the chart default) by appending itself to the existing
+# /etc/cni/net.d/10-aws.conflist. Per pod the sequence becomes: aws-cni attaches
+# the network, then istio-cni enters that pod's netns and writes the iptables
+# rules redirecting traffic to the sidecar.
+#
+# Why it exists here at all: those rules are what istio-init writes today, and
+# istio-init needs NET_ADMIN, NET_RAW and runAsUser=0. Pod Security Admission
+# rejects all three at `restricted` -- and at `baseline`, which still forbids
+# non-default capabilities. Every namespace this platform creates is stamped
+# `pod-security.kubernetes.io/enforce: restricted`, so classic sidecar
+# injection and the platform's own baseline could not coexist. The privilege
+# does not disappear here; it moves out of every workload pod and into one
+# DaemonSet in istio-system, which carries no PSA labels.
+#
+# Note this is only half the change. istiod keeps injecting istio-init until
+# pilot.cni.enabled is true in values-istiod.yaml; installing this DaemonSet
+# on its own would add a component and fix nothing.
+
+# Tolerations are left at the chart defaults deliberately -- `effect: NoSchedule,
+# operator: Exists` plus CriticalAddonsOnly. This has to run on every node that
+# can ever host a meshed pod, which includes the tainted system node group and
+# every node Karpenter creates. It is also why the shared system-tolerations
+# kustomize component is not applied to this directory: that patch REPLACES a
+# tolerations list, and replacing this one with a single CriticalAddonsOnly
+# entry would stop the DaemonSet reaching Karpenter's untainted nodes -- where
+# workloads actually run.
+
+# NOTE ON STRUCTURE: these keys are top-level, not nested under `cni:`. The
+# chart keeps its defaults under `_internal_defaults_do_not_set` and documents
+# that callers set the fields directly. A `cni:` wrapper parses as valid YAML,
+# is silently ignored, and leaves every default in place -- so the file looks
+# like it is configuring the plugin while changing nothing.
+
+# Chained onto the VPC CNI's conflist rather than installed as a standalone
+# config. Standalone (`false`) is for platforms whose CNI cannot chain;
+# EKS can, and chaining is what keeps VPC networking untouched.
+chained: true
+
+# kube-system is excluded by default and stays excluded: the VPC CNI's own
+# aws-node pods live there, and redirecting the plugin that provides pod
+# networking through a proxy that depends on pod networking is circular.
+excludeNamespaces:
+  - kube-system
+
+repair:
+  # The race this exists for is sharper on this cluster than on most. Karpenter
+  # creates and consolidates nodes continuously, and a meshed pod scheduled
+  # onto a node before istio-cni-node is Running there gets no redirect rules
+  # at all -- it runs, and its traffic silently bypasses the mesh.
+  enabled: true
+
+  # repairPods, not deletePods or labelPods. All three fix the same problem;
+  # they differ in what they are trusted with. deletePods lets this DaemonSet
+  # delete any pod in the cluster and labelPods lets it write any pod's
+  # metadata, both of which are far wider than the problem. repairPods needs
+  # no RBAC beyond its own privileged securityContext: it repairs the netns in
+  # place.
+  #
+  # The visible cost is that a pod caught by the race crashloops for a minute
+  # or two before recovering, rather than being deleted and rescheduled. That
+  # is a normal state to see on this cluster after a node scale-up, not an
+  # incident.
+  repairPods: true
+  deletePods: false
+  labelPods: false
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { memory: 128Mi }

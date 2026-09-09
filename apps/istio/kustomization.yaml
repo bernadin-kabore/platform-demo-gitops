@@ -10,6 +10,18 @@ helmCharts:
     valuesFile: values-base.yaml
     includeCRDs: true
 
+  # Listed before istiod on purpose. Kustomize renders in order, and the CNI
+  # DaemonSet has to exist on every node before istiod stops injecting
+  # istio-init -- otherwise a meshed pod gets neither mechanism and its traffic
+  # silently bypasses the mesh. The repair controller in values-cni.yaml covers
+  # the window this ordering cannot.
+  - name: cni
+    repo: https://istio-release.storage.googleapis.com/charts
+    version: 1.30.4
+    releaseName: istio-cni
+    namespace: istio-system
+    valuesFile: values-cni.yaml
+
   - name: istiod
     repo: https://istio-release.storage.googleapis.com/charts
     version: 1.30.4
