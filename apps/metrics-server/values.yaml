@@ -1,0 +1,12 @@
+# The chart's defaultArgs already carry what EKS needs —
+# --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname and
+# --kubelet-use-node-status-port — and EKS signs kubelet serving certificates
+# with the cluster CA, so --kubelet-insecure-tls is deliberately NOT set here.
+# Adding it would silence a TLS failure rather than fix one.
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { memory: 192Mi }
+
+# One replica is right for a demo; metrics-server is not on the request path
+# for any workload and a gap in scrapes costs nothing but a stale HPA reading.
+replicas: 1
