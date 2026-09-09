@@ -14,26 +14,22 @@ metadata:
   name: ai-platform
   labels:
     platform.acme.io/managed: "true"
-    # Deliberately NOT istio-injection: enabled, and this is the trade that
-    # keeps restricted enforcement below.
+    # In the mesh AND at restricted, which needed the Istio CNI plugin to be
+    # possible at all. Classic sidecar injection adds an istio-init container
+    # needing NET_ADMIN, NET_RAW and runAsUser=0; Pod Security Admission
+    # refuses that at restricted and at baseline alike, so for a while this
+    # namespace had to give up one or the other and gave up the mesh.
     #
-    # Sidecar injection adds an istio-init container that rewrites iptables and
-    # needs NET_ADMIN, NET_RAW and runAsUser=0. Pod Security Admission rejects
-    # that at restricted AND at baseline -- baseline still forbids non-default
-    # capabilities -- so the only level that admits it is privileged, which is
-    # not a trade worth making for the component holding a GitHub App private
-    # key. The agent's own pod meets restricted in full on its own.
+    # apps/istio now installs the CNI plugin, which writes those iptables rules
+    # from a node-level DaemonSet instead. Injected pods get only the sidecar,
+    # carry no elevated capabilities, and satisfy restricted unaided -- so both
+    # labels can stand together and the agent gets mTLS and sidecar telemetry
+    # back.
     #
-    # What this costs: the agent is outside the mesh. No mTLS on its traffic,
-    # no sidecar telemetry in Kiali, and peer-authentication-strict.yaml sets
-    # STRICT mesh-wide, so meshed callers cannot reach it. Nothing calls it
-    # from inside the mesh today; that changes the moment something does.
-    #
-    # The fix that removes the trade is the Istio CNI plugin: iptables setup
-    # moves to a node-level DaemonSet, istio-init disappears from workload
-    # pods, and this namespace can carry injection and restricted at once.
-    # When that lands, add istio-injection: enabled back here and nothing else
-    # needs to change.
+    # These two labels are now coupled: removing the CNI plugin without
+    # removing istio-injection here puts istio-init back into every pod in this
+    # namespace, and every one of them is refused at admission.
+    istio-injection: enabled
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/warn: restricted
