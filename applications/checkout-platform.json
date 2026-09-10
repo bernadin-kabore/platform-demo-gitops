@@ -1,0 +1,5 @@
+{
+  "application": "checkout-platform",
+  "gitopsRepoURL": "https://github.com/bernadin-kabore/checkout-platform-gitops.git",
+  "owner": "bernadin-kabore"
+}
