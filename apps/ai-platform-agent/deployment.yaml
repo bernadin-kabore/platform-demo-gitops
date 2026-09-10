@@ -48,7 +48,7 @@ spec:
           # The ECR repository is named after the GitHub repository, because
           # compositions/service-delivery-foundation keys both off the same map
           # entry — see platform-demo-terraform-modules/envs/dev/terraform.tfvars.
-          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/platform-demo-ai-agent@sha256:3fb6617dc3390df5522422717d09fa4ef4f9d23ad69164e01b8f1cbf2058504f
+          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/platform-demo-ai-agent@sha256:39eaecabdca8a1e8a5e0c880477e727510de864a2de91a632e39a5f91b2d7721
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
