@@ -31,7 +31,7 @@ spec:
         # labelled platform.acme.io/managed. "team" is also what OpenCost
         # attributes this component's Bedrock-driven CPU time by.
         app.kubernetes.io/name: ai-platform-agent
-        app.kubernetes.io/version: "dd309d9"
+        app.kubernetes.io/version: "720728d"
         team: platform-team
     spec:
       serviceAccountName: ai-platform-agent
@@ -48,7 +48,7 @@ spec:
           # The ECR repository is named after the GitHub repository, because
           # compositions/service-delivery-foundation keys both off the same map
           # entry — see platform-demo-terraform-modules/envs/dev/terraform.tfvars.
-          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/platform-demo-ai-agent@sha256:39eaecabdca8a1e8a5e0c880477e727510de864a2de91a632e39a5f91b2d7721
+          image: 382334305409.dkr.ecr.us-east-1.amazonaws.com/platform-demo-ai-agent@sha256:ccc1dc9b2073863540b3ead085dc03a8a44301ecf77a53e9091607a531bf4c95
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
