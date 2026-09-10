@@ -10,6 +10,28 @@ spec:
   destinations:
     - namespace: "*"
       server: "https://kubernetes.default.svc"
+
+  # The one cluster-scoped resource a workload may create, and only because it
+  # cannot deploy without it.
+  #
+  # An application's ApplicationSet syncs with CreateNamespace=true and
+  # managedNamespaceMetadata, which stamps restricted Pod Security labels on
+  # the namespace. managedNamespaceMetadata makes Argo CD track the Namespace
+  # as a managed resource, so the project has to permit the kind -- otherwise
+  # every sync fails with "resource :Namespace is not permitted in project
+  # workloads" and nothing an application owns ever deploys.
+  #
+  # Granting Namespace is not granting cluster administration. ClusterRole,
+  # ClusterRoleBinding, CustomResourceDefinition and the webhook
+  # configurations all remain refused, which is where the actual privilege
+  # lives. The alternative -- having the platform pre-create a namespace per
+  # service per environment -- would put every new application and every new
+  # environment back through a pull request against the platform repository,
+  # which is the coupling the app-delivery pattern exists to remove.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
   namespaceResourceWhitelist:
     - { group: "", kind: Service }
     - { group: "", kind: ServiceAccount }
