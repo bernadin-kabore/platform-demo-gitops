@@ -1,0 +1,5 @@
+{
+  "application": "demo-from-backstage",
+  "gitopsRepoURL": "https://github.com/bernadin-kabore/demo-from-backstage-gitops.git",
+  "owner": "group:default/platform-team"
+}
